@@ -130,7 +130,7 @@ LEVELS = {
             "Configure a travel agent by equipping it with tools from the pool. "
             "Drag a tool from the left panel into your loadout on the right. "
             "Click an equipped tool to remove it. "
-            "You may select up to 5 tools."
+            "You may select up to 5 — but the optimal solution uses just 3."
         ),
         "task": (
             "A user wants to fly to a sunny European beach destination departing next week. "
@@ -161,7 +161,7 @@ LEVELS = {
         "instructions": (
             "This task has three simultaneous constraints. "
             "Think through every reasoning step the agent must take before committing. "
-            "Select up to 5 tools."
+            "Select up to 5 tools — the optimal answer uses 3."
         ),
         "task": (
             "Find the three cheapest European city destinations with consistently high visitor ratings "
@@ -195,7 +195,7 @@ LEVELS = {
         "instructions": (
             "Multi-step planning under a strict budget ceiling. "
             "A gap at any single reasoning step can cascade into total failure. "
-            "Select up to 5 tools."
+            "Select up to 5 tools — the optimal answer uses 3."
         ),
         "task": (
             "Plan a complete 3-day solo trip to Europe covering flights, accommodation, "
@@ -529,32 +529,6 @@ div.start-btn .stButton > button {
 }
 .stTextInput input:focus { border-color: #a09bff !important; outline: none !important; }
 
-/* ── HIDE the hidden bridge input ── */
-[data-testid="stTextInput"]:has(input[aria-label*="_dnd_hidden_"]) {
-    display: none !important;
-}
-
-/* ── Confirm button styling ── */
-div.confirm-btn .stButton > button {
-    background: #f7c948 !important; color: #080810 !important;
-    border: none !important; font-weight: 700 !important;
-    font-size: 11px !important; letter-spacing: 1.5px !important;
-    text-transform: uppercase !important; padding: 10px 28px !important;
-    width: auto !important;
-}
-div.confirm-btn .stButton > button:hover { opacity: .85 !important; background: #f7c948 !important; }
-
-/* ── Inline start button alignment ── */
-div.inline-start-btn {
-    margin-top: -8px !important;
-}
-div.inline-start-btn .stButton > button {
-    background: #a09bff !important; color: #080810 !important;
-    border: none !important; font-weight: 700 !important; letter-spacing: 1.5px !important;
-    text-transform: uppercase !important; width: 100% !important;
-    height: 42px !important;
-}
-
 /* ── metrics ── */
 [data-testid="metric-container"] {
     background: #0c0c18 !important; border: 1px solid #1c1c2c !important;
@@ -595,31 +569,14 @@ hr { border-color: #1c1c2c !important; margin: 24px 0 !important; }
 # Uses Streamlit component value API to return selection back to Python.
 # ─────────────────────────────────────────────────────────────────────────────
 
-def drag_drop_selector(sel_key: str, tool_pool: list, level_key: str) -> tuple:
+def drag_drop_selector(tool_pool: list, init_selection: list) -> list:
     """
-    Drag-and-drop tool selector with a Confirm button to sync selection.
-    
-    Returns (confirmed_tools, pending_tools, needs_confirm):
-    - confirmed_tools: list of tools that have been confirmed
-    - pending_tools: list from the JS component (may differ if user dragged but didn't confirm)
-    - needs_confirm: True if there are unconfirmed changes
+    Renders the drag-and-drop panel and returns the current selection as a list.
+    State is managed ENTIRELY inside the component — no multiselect needed.
+    Uses st.components.v1.html with key= to return a value via the component protocol.
     """
-    hidden_key = f"_dnd_hidden_{sel_key}"
-    confirmed_key = f"_confirmed_{sel_key}"
-    
-    # Initialize confirmed selection in session state
-    if confirmed_key not in st.session_state:
-        st.session_state[confirmed_key] = []
-    
-    confirmed = st.session_state[confirmed_key]
-    valid = {n for n, _ in tool_pool}
-    confirmed = [c for c in confirmed if c in valid][:MAX_TOOLS]
-    
     pool_json = json.dumps([{"name": n, "desc": d} for n, d in tool_pool])
-    sel_json  = json.dumps(confirmed)
-
-    # Unique DOM id so multiple levels don't clash when switching tabs
-    uid = sel_key.replace(" ", "_")
+    sel_json  = json.dumps(init_selection)
 
     component_html = f"""
 <!DOCTYPE html>
@@ -629,75 +586,97 @@ def drag_drop_selector(sel_key: str, tool_pool: list, level_key: str) -> tuple:
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500&display=swap');
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-  body {{ font-family: 'IBM Plex Mono','Courier New',monospace; background:transparent; color:#d0d0e0; user-select:none; font-size:12px; }}
-  .grid {{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }}
-  .col-label {{ font-size:9px; letter-spacing:2px; text-transform:uppercase; color:#444466; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }}
-  .status {{ font-size:9px; letter-spacing:1.5px; }}
-  .n-ok {{ color:#3dffa0; }} .n-warn {{ color:#f7c948; }} .n-neutral {{ color:#555577; }}
-  .panel {{ background:#0c0c18; border:1px solid #1c1c2c; border-radius:6px; padding:12px; max-height:400px; overflow-y:auto; }}
-  .loadout-panel {{ border-color:#24243a; background:#09091a; min-height:180px; }}
-  .chip {{ display:flex; align-items:flex-start; gap:10px; background:#111122; border:1px solid #1c1c2c; border-radius:4px; padding:9px 11px; margin-bottom:6px; cursor:grab; transition:border-color .12s,background .12s,opacity .12s; }}
-  .chip:active {{ cursor:grabbing; }}
-  .chip:hover {{ border-color:#a09bff; background:#14142a; }}
-  .chip.dragging {{ opacity:.3; }}
-  .chip.equipped {{ background:rgba(160,155,255,.07); border-color:rgba(160,155,255,.3); cursor:pointer; }}
-  .chip.equipped:hover {{ border-color:#ff6b6b; background:rgba(255,107,107,.05); }}
-  .handle {{ color:#2a2a44; font-size:14px; line-height:1.2; flex-shrink:0; margin-top:1px; }}
-  .chip-name {{ font-weight:600; color:#c8c8d8; font-size:11px; line-height:1.3; }}
-  .chip-desc {{ color:#3a3a55; font-size:10px; line-height:1.4; margin-top:2px; font-family:'Inter',sans-serif; }}
-  .dropzone {{ min-height:52px; border:1px dashed #1c1c2c; border-radius:4px; display:flex; align-items:center; justify-content:center; color:#222240; font-size:9px; letter-spacing:1.5px; text-transform:uppercase; transition:border-color .12s,background .12s,color .12s; padding:10px; margin-top:4px; }}
-  .dropzone.over {{ border-color:#a09bff; background:rgba(160,155,255,.04); color:#a09bff; }}
-  .remove-hint {{ font-size:9px; letter-spacing:1px; color:#2a2a44; text-align:center; margin-top:8px; font-family:'Inter',sans-serif; }}
+  body {{
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
+    background: transparent; color: #d0d0e0; user-select: none;
+    font-size: 12px;
+  }}
+  .grid {{
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  }}
+  .col-label {{
+    font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+    color: #444466; margin-bottom: 10px;
+    display: flex; justify-content: space-between; align-items: center;
+  }}
+  .col-label .status {{ font-size: 9px; letter-spacing: 1.5px; }}
+  .n-ok {{ color: #3dffa0; }} .n-warn {{ color: #f7c948; }} .n-neutral {{ color: #555577; }}
+  .panel {{
+    background: #0c0c18; border: 1px solid #1c1c2c; border-radius: 6px;
+    padding: 12px; min-height: 220px;
+  }}
+  .loadout-panel {{ border-color: #24243a; background: #09091a; }}
+  .chip {{
+    display: flex; align-items: flex-start; gap: 10px;
+    background: #111122; border: 1px solid #1c1c2c; border-radius: 4px;
+    padding: 9px 11px; margin-bottom: 6px; cursor: grab;
+    transition: border-color .12s, background .12s, opacity .12s;
+  }}
+  .chip:active {{ cursor: grabbing; }}
+  .chip:hover {{ border-color: #a09bff; background: #14142a; }}
+  .chip.dragging {{ opacity: .3; }}
+  .chip.equipped {{
+    background: rgba(160,155,255,.07); border-color: rgba(160,155,255,.3); cursor: pointer;
+  }}
+  .chip.equipped:hover {{ border-color: #ff6b6b; background: rgba(255,107,107,.05); }}
+  .handle {{ color: #2a2a44; font-size: 14px; line-height: 1.2; flex-shrink: 0; margin-top: 1px; }}
+  .chip-name {{ font-weight: 600; color: #c8c8d8; font-size: 11px; line-height: 1.3; }}
+  .chip-desc {{ color: #3a3a55; font-size: 10px; line-height: 1.4; margin-top: 2px; font-family: 'Inter', sans-serif; }}
+  .dropzone {{
+    min-height: 52px; border: 1px dashed #1c1c2c; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    color: #222240; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+    transition: border-color .12s, background .12s, color .12s;
+    padding: 10px; margin-top: 4px;
+  }}
+  .dropzone.over {{ border-color: #a09bff; background: rgba(160,155,255,.04); color: #a09bff; }}
+  .remove-hint {{
+    font-size: 9px; letter-spacing: 1px; color: #2a2a44; text-align: center;
+    margin-top: 8px; font-family: 'Inter', sans-serif;
+  }}
 </style>
 </head>
 <body>
 <div class="grid">
   <div>
-    <div class="col-label">Tool Pool <span class="status n-neutral" id="{uid}-pool-count"></span></div>
-    <div class="panel" id="{uid}-pool"></div>
+    <div class="col-label">Tool Pool<span class="status n-neutral" id="pool-count"></span></div>
+    <div class="panel" id="pool"></div>
   </div>
   <div>
-    <div class="col-label">Loadout <span class="status" id="{uid}-lo-count"></span></div>
-    <div class="panel loadout-panel" id="{uid}-loadout"></div>
-    <div class="remove-hint" id="{uid}-hint"></div>
+    <div class="col-label">Loadout<span class="status" id="loadout-count"></span></div>
+    <div class="panel loadout-panel" id="loadout"></div>
+    <div class="remove-hint" id="remove-hint"></div>
   </div>
 </div>
-<input type="hidden" id="{uid}-output" value="{"|".join(confirmed)}">
 
 <script>
-const MAX  = {MAX_TOOLS};
-const POOL = {pool_json};
-let sel    = {sel_json};
+const MAX   = {MAX_TOOLS};
+const POOL  = {pool_json};
+let sel     = {sel_json};
+let dragSrc = null;
 
-function updateHiddenInput() {{
-  document.getElementById('{uid}-output').value = sel.join('|');
-  // Also try to update the Streamlit text input
-  try {{
-    const inputs = window.parent.document.querySelectorAll('input[type="text"]');
-    for (const inp of inputs) {{
-      const container = inp.closest('[data-testid="stTextInput"]');
-      if (container) {{
-        const label = container.querySelector('label');
-        if (label && label.textContent.trim() === '{hidden_key}') {{
-          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.parent.HTMLInputElement.prototype, 'value').set;
-          nativeInputValueSetter.call(inp, sel.join('|'));
-          inp.dispatchEvent(new Event('input', {{ bubbles: true }}));
-          inp.dispatchEvent(new Event('change', {{ bubbles: true }}));
-          return;
-        }}
-      }}
-    }}
-  }} catch(e) {{ }}
+function send() {{
+  // Streamlit component value API
+  window.parent.postMessage({{
+    isStreamlitMessage: true,
+    type: 'streamlit:setComponentValue',
+    value: sel
+  }}, '*');
 }}
 
 function mkChip(t, equipped) {{
   const d = document.createElement('div');
   d.className = 'chip' + (equipped ? ' equipped' : '');
-  d.draggable = !equipped;
+  d.draggable = !equipped;   // pool chips are draggable; equipped chips are click-to-remove
   d.dataset.name = t.name;
-  d.innerHTML = '<span class="handle">⠿</span><div><div class="chip-name">' + t.name + '</div><div class="chip-desc">' + t.desc + '</div></div>';
+  d.innerHTML =
+    '<span class="handle">⠿</span>' +
+    '<div><div class="chip-name">' + t.name + '</div>' +
+    '<div class="chip-desc">' + t.desc + '</div></div>';
+
   if (!equipped) {{
     d.addEventListener('dragstart', e => {{
+      dragSrc = t.name;
       e.dataTransfer.setData('text/plain', t.name);
       e.dataTransfer.effectAllowed = 'move';
       setTimeout(() => d.classList.add('dragging'), 0);
@@ -705,7 +684,10 @@ function mkChip(t, equipped) {{
     d.addEventListener('dragend', () => d.classList.remove('dragging'));
   }} else {{
     d.title = 'Click to remove';
-    d.addEventListener('click', () => {{ sel = sel.filter(x => x !== t.name); render(); updateHiddenInput(); }});
+    d.addEventListener('click', () => {{
+      sel = sel.filter(x => x !== t.name);
+      render(); send();
+    }});
   }}
   return d;
 }}
@@ -714,57 +696,75 @@ function mkDropzone() {{
   const dz = document.createElement('div');
   dz.className = 'dropzone';
   dz.textContent = sel.length === 0 ? 'Drag tools here to equip' : '+ drag another tool';
-  dz.addEventListener('dragover', e => {{ e.preventDefault(); e.dataTransfer.dropEffect='move'; dz.classList.add('over'); }});
+  dz.addEventListener('dragover', e => {{ e.preventDefault(); e.dataTransfer.dropEffect = 'move'; dz.classList.add('over'); }});
   dz.addEventListener('dragleave', () => dz.classList.remove('over'));
   dz.addEventListener('drop', e => {{
     e.preventDefault(); dz.classList.remove('over');
     const name = e.dataTransfer.getData('text/plain');
-    if (name && !sel.includes(name) && sel.length < MAX) {{ sel.push(name); render(); updateHiddenInput(); }}
+    if (name && !sel.includes(name) && sel.length < MAX) {{
+      sel.push(name); render(); send();
+    }}
   }});
   return dz;
 }}
 
 function render() {{
-  const poolEl = document.getElementById('{uid}-pool');
+  // Pool
+  const poolEl = document.getElementById('pool');
   poolEl.innerHTML = '';
-  POOL.forEach(t => {{ if (!sel.includes(t.name)) poolEl.appendChild(mkChip(t, false)); }});
-  document.getElementById('{uid}-pool-count').textContent = (POOL.length - sel.length) + ' available';
+  POOL.forEach(t => {{
+    if (!sel.includes(t.name)) poolEl.appendChild(mkChip(t, false));
+  }});
+  const remaining = POOL.length - sel.length;
+  document.getElementById('pool-count').textContent = remaining + ' available';
 
-  const loEl = document.getElementById('{uid}-loadout');
+  // Loadout
+  const loEl = document.getElementById('loadout');
   loEl.innerHTML = '';
-  sel.forEach(name => {{ const t = POOL.find(x => x.name === name); if (t) loEl.appendChild(mkChip(t, true)); }});
+  sel.forEach(name => {{
+    const t = POOL.find(x => x.name === name);
+    if (t) loEl.appendChild(mkChip(t, true));
+  }});
   if (sel.length < MAX) loEl.appendChild(mkDropzone());
 
-  const n = sel.length;
+  // Counter
+  const n   = sel.length;
   const cls = n === 0 ? 'n-neutral' : n <= 3 ? 'n-ok' : 'n-warn';
-  const cEl = document.getElementById('{uid}-lo-count');
-  cEl.className = 'status ' + cls;
-  cEl.textContent = n === 0 ? '0 / ' + MAX : n + ' / ' + MAX + ' equipped';
-  document.getElementById('{uid}-hint').textContent = sel.length > 0 ? 'Click an equipped tool to remove it' : '';
+  const tag = n === 0 ? '0 / 5' : n + ' / 5 equipped' + (n === 3 ? ' — optimal' : n > 3 ? ' — above optimal' : '');
+  const cEl = document.getElementById('loadout-count');
+  cEl.className = 'status ' + cls; cEl.textContent = tag;
+
+  // Remove hint
+  document.getElementById('remove-hint').textContent = sel.length > 0 ? 'Click an equipped tool to remove it' : '';
 }}
 
-render();
+// Streamlit readiness handshake
+function onReady() {{
+  window.parent.postMessage({{ isStreamlitMessage: true, type: 'streamlit:componentReady', apiVersion: 1 }}, '*');
+  render(); send();
+}}
+
+window.addEventListener('message', e => {{
+  if (e.data && e.data.type === 'streamlit:render') {{ render(); send(); }}
+}});
+
+onReady();
 </script>
 </body>
 </html>
 """
-    # Fixed height with scrolling inside the component
-    height = 460
+    # height auto-grows with number of tools; 14 tools ≈ 480px
+    height = max(320, 60 + len(tool_pool) * 38)
+
+    # components.html does not support key= — it always returns None.
+    # We render it purely as a visual UI; the session_state list is the
+    # authoritative selection, updated by the checkbox buttons below.
     components.html(component_html, height=height)
 
-    # Hidden text input that JS updates when user drags tools
-    pending_val = st.text_input(
-        hidden_key,
-        value="|".join(confirmed),
-        key=hidden_key,
-        label_visibility="collapsed",
-    )
-    
-    # Parse pending selection from the hidden input
-    pending = [v for v in pending_val.split("|") if v and v in valid] if pending_val else []
-    pending = pending[:MAX_TOOLS]
-    
-    return confirmed, pending
+    # Always return the caller-supplied init_selection unchanged.
+    # The actual mutable state is managed by the toggle buttons rendered
+    # in game_tab() immediately after this call.
+    return list(init_selection)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # AGENT STARTUP ANIMATION
@@ -942,12 +942,12 @@ def game_tab():
     font-size: 28px;
     font-weight: 800;
     letter-spacing: -0.5px;
-    color: #ffffff;
+    color: #ff8c00;
     text-shadow:
-      -1px -1px 0 #ff8c00,
-       1px -1px 0 #ff8c00,
-      -1px  1px 0 #ff8c00,
-       1px  1px 0 #ff8c00;
+      -1px -1px 0 #fff,
+       1px -1px 0 #fff,
+      -1px  1px 0 #fff,
+       1px  1px 0 #fff;
     margin-bottom: 4px;
     line-height: 1.1;
   ">Aggie Data Science Club (ADSC)</div>
@@ -969,26 +969,29 @@ def game_tab():
     # ── TEAM NAME GATE ────────────────────────────────────────────────────────
     if not st.session_state.team_name:
         st.markdown("<hr>", unsafe_allow_html=True)
+        # "Enter Your Team Name" label in Syne font, centered
         st.markdown(
-            '<p style="font-family:IBM Plex Mono,monospace;font-size:9px;'
-            'letter-spacing:2px;text-transform:uppercase;color:#444466;margin-bottom:8px;">'
-            'Team Name</p>',
+            '<p style="font-family:Syne,sans-serif;font-size:16px;font-weight:700;'
+            'letter-spacing:0.5px;color:#d0d0e0;margin-bottom:8px;text-align:center;">'
+            'Enter Your Team Name</p>',
             unsafe_allow_html=True,
         )
-        c1, c2 = st.columns([5, 1], gap="small")
-        with c1:
-            team_input = st.text_input(
+        # Centered text input
+        spacer_l, input_col, spacer_r = st.columns([1, 2, 1])
+        with input_col:
+            st.text_input(
                 "team_name_input",
-                placeholder="Enter your team name",
+                placeholder="Team name",
                 label_visibility="collapsed",
                 key="team_name_field",
             )
-        with c2:
-            st.markdown('<div class="inline-start-btn">', unsafe_allow_html=True)
+        # Start button centered underneath
+        spacer_l2, btn_col, spacer_r2 = st.columns([5, 2, 5])
+        with btn_col:
+            st.markdown('<div class="start-btn">', unsafe_allow_html=True)
             clicked = st.button("Start", key="start_btn", use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # Read value from session_state via widget key — safe across column scopes
         if clicked:
             raw = st.session_state.get("team_name_field", "")
             cleaned, err = sanitize_team_name(raw)
@@ -1053,20 +1056,48 @@ def game_tab():
 
         st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
-        # ── TOOL SELECTOR (drag-and-drop only) ───────────────────────────────
+        # ── TOOL SELECTOR ─────────────────────────────────────────────────────
+        # sel_key holds the authoritative list of selected tool names.
         sel_key = f"sel_{level_key}"
-        confirmed_key = f"_confirmed_{sel_key}"
-        
-        # Initialize confirmed selection
-        if confirmed_key not in st.session_state:
-            st.session_state[confirmed_key] = []
+        if sel_key not in st.session_state:
+            st.session_state[sel_key] = []
 
-        confirmed, pending = drag_drop_selector(sel_key=sel_key, tool_pool=level["tool_pool"], level_key=level_key)
-        
-        n_confirmed = len(confirmed)
-        n_pending = len(pending)
-        has_pending_changes = (set(pending) != set(confirmed)) and n_pending > 0
-        
+        # Render the visual drag-drop panel (display only — synced from session_state)
+        drag_drop_selector(
+            tool_pool      = level["tool_pool"],
+            init_selection = st.session_state[sel_key],
+        )
+
+        # ── FUNCTIONAL TOGGLE BUTTONS (actual state management) ───────────────
+        st.markdown(
+            '<p style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:2px;'
+            'text-transform:uppercase;color:#333355;margin:10px 0 8px;">Select tools (tap to equip / remove)</p>',
+            unsafe_allow_html=True,
+        )
+
+        tool_names = [n for n, _ in level["tool_pool"]]
+        current_sel = st.session_state[sel_key]
+
+        # Render tool buttons in rows of 3
+        cols_per_row = 3
+        for row_start in range(0, len(tool_names), cols_per_row):
+            row_tools = tool_names[row_start:row_start + cols_per_row]
+            btn_cols  = st.columns(len(row_tools))
+            for col, name in zip(btn_cols, row_tools):
+                with col:
+                    equipped = name in current_sel
+                    label    = f"✓ {name}" if equipped else name
+                    # Use a unique key per tool per level
+                    btn_key  = f"tog_{level_key}_{name.replace(' ', '_').replace('&','')}"
+                    if st.button(label, key=btn_key, use_container_width=True):
+                        if equipped:
+                            st.session_state[sel_key] = [x for x in current_sel if x != name]
+                        elif len(current_sel) < MAX_TOOLS:
+                            st.session_state[sel_key] = current_sel + [name]
+                        st.rerun()
+
+        chosen   = st.session_state[sel_key]
+        n_tools  = len(chosen)
         is_complete = st.session_state.level_complete[level_key]
         no_lives    = lives_left <= 0
         now_ts      = time.time()
@@ -1076,37 +1107,31 @@ def game_tab():
 
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
-        # Show Confirm Tools button if there are pending changes
-        if has_pending_changes and not is_complete and not no_lives:
-            st.markdown(
-                f'<p style="font-family:IBM Plex Mono,monospace;font-size:10px;'
-                f'color:#f7c948;margin-bottom:8px;">{n_pending} tool{"s" if n_pending != 1 else ""} selected — click Confirm to lock in your loadout.</p>',
-                unsafe_allow_html=True,
-            )
-            st.markdown('<div class="confirm-btn">', unsafe_allow_html=True)
-            if st.button("Confirm Tools", key=f"confirm_{level_key}"):
-                st.session_state[confirmed_key] = pending.copy()
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-        elif n_confirmed == 0:
+        # Readiness indicator
+        if n_tools == 0:
             st.markdown(
                 '<p style="font-family:IBM Plex Mono,monospace;font-size:10px;'
-                'color:#333355;margin-bottom:8px;">Drag tools into your loadout, then confirm to deploy.</p>',
+                'color:#333355;margin-bottom:8px;">Drag at least one tool into your loadout to deploy.</p>',
+                unsafe_allow_html=True,
+            )
+        elif n_tools == 3:
+            st.markdown(
+                '<p style="font-family:IBM Plex Mono,monospace;font-size:10px;'
+                'color:#3dffa0;margin-bottom:8px;">Loadout at optimal size — ready to deploy.</p>',
                 unsafe_allow_html=True,
             )
         else:
             st.markdown(
                 f'<p style="font-family:IBM Plex Mono,monospace;font-size:10px;'
-                f'color:#3dffa0;margin-bottom:8px;">{n_confirmed} tool{"s" if n_confirmed != 1 else ""} confirmed and ready.</p>',
+                f'color:#666688;margin-bottom:8px;">{n_tools} tool{"s" if n_tools > 1 else ""} equipped.</p>',
                 unsafe_allow_html=True,
             )
 
-        # Deploy button - only enabled if tools are confirmed
-        deploy_disabled = (n_confirmed == 0 or is_complete or no_lives or on_cooldown)
+        deploy_disabled = (n_tools == 0 or is_complete or no_lives or on_cooldown)
         st.markdown('<div class="deploy-btn">', unsafe_allow_html=True)
         deploy_clicked  = st.button(
             "Deploy Agent",
-            disabled=False,
+            disabled=deploy_disabled,
             key=f"deploy_{level_key}",
         )
         st.markdown('</div>', unsafe_allow_html=True)
@@ -1123,13 +1148,13 @@ def game_tab():
             st.session_state.deploy_error = ""
             st.session_state.last_deploy_ts[level_key] = now_ts
 
-            sel_frozen = frozenset(confirmed)
+            sel_frozen = frozenset(chosen)
             success    = is_correct(level_key, sel_frozen)
             lines      = build_terminal_lines(level_key, sel_frozen, success)
-            st.session_state.terminal_data = (level_key, lines, success, list(confirmed))
+            st.session_state.terminal_data = (level_key, lines, success, list(chosen))
 
             if success:
-                score = compute_score(level_key, lives_left, n_confirmed)
+                score = compute_score(level_key, lives_left, n_tools)
                 st.session_state.level_scores[level_key]  = score
                 st.session_state.level_complete[level_key] = True
                 upsert_leaderboard(st.session_state.team_name, level_key, score)
@@ -1323,7 +1348,7 @@ def howto_tab():
         ("#a09bff", "The Loadout",
          "Each level shows a task and a tool pool on the right. Drag a tool from the pool panel into your "
          "loadout panel, or click an equipped tool to remove it. You may equip up to 5 tools, "
-         "Fewer tools on a correct answer earns a higher efficiency bonus."),
+         "but the highest-scoring solution always uses exactly 3. More tools reduce your efficiency bonus."),
         ("#ff6b6b", "Lives",
          "Each level starts with 3 lives, shown as Roman numerals (III → II → I → 0). "
          "An incorrect submission — where the agent cannot satisfy all task constraints without guessing — "
