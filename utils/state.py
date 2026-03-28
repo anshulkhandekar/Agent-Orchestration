@@ -1,6 +1,5 @@
 """Game state management using st.session_state."""
 import streamlit as st
-from datetime import datetime
 
 
 def init_state():
@@ -16,22 +15,26 @@ def init_state():
         "total_score": 0,
         "game_started": False,
         "show_instructions": False,
-        # Level-specific state
+        # Level-specific interaction state
         "l1_selected": [],
         "l1_submitted": False,
         "l1_result": None,
+        "l1_score_saved": False,
         "l2_selected": [],
         "l2_order": [],
         "l2_submitted": False,
         "l2_result": None,
+        "l2_score_saved": False,
         "l3_choice": None,
         "l3_submitted": False,
         "l3_result": None,
+        "l3_score_saved": False,
         "l4_round": 1,
         "l4_choices": {},
         "l4_submitted": False,
         "l4_result": None,
-        # Animation triggers
+        "l4_score_saved": False,
+        # Animation helpers
         "show_terminal": False,
         "terminal_done": False,
     }
@@ -41,25 +44,29 @@ def init_state():
 
 
 def reset_level_state(level: int):
-    """Reset state for a specific level for retry."""
+    """Reset interaction state for a specific level (retry support)."""
     if level == 1:
         st.session_state.l1_selected = []
         st.session_state.l1_submitted = False
         st.session_state.l1_result = None
+        st.session_state.l1_score_saved = False
     elif level == 2:
         st.session_state.l2_selected = []
         st.session_state.l2_order = []
         st.session_state.l2_submitted = False
         st.session_state.l2_result = None
+        st.session_state.l2_score_saved = False
     elif level == 3:
         st.session_state.l3_choice = None
         st.session_state.l3_submitted = False
         st.session_state.l3_result = None
+        st.session_state.l3_score_saved = False
     elif level == 4:
         st.session_state.l4_round = 1
         st.session_state.l4_choices = {}
         st.session_state.l4_submitted = False
         st.session_state.l4_result = None
+        st.session_state.l4_score_saved = False
     st.session_state.show_terminal = False
     st.session_state.terminal_done = False
 
@@ -69,7 +76,7 @@ def set_page(page: str):
 
 
 def complete_level(level: int, score: int, breakdown: dict):
-    """Mark a level complete and store score."""
+    """Mark a level complete and update the running best score."""
     st.session_state.level_scores[level] = {"total": score, "breakdown": breakdown}
     if score > st.session_state.level_best[level]:
         st.session_state.level_best[level] = score

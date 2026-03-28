@@ -2,7 +2,7 @@
 import streamlit as st
 from components.terminal import render_terminal
 from components.cards import render_ordering_interface
-from components.progress import render_progress, render_score_screen
+from components.progress import render_progress, render_level_header, render_score_screen
 from utils.scoring import (
     LEVEL2_CONFIG,
     LEVEL2_ACTIONS,
@@ -11,59 +11,87 @@ from utils.scoring import (
     compute_score,
 )
 from utils.state import complete_level, reset_level_state
+from utils.supabase import save_score
+
+
+_DETAILS = [
+    {
+        "icon": "🎯",
+        "label": "Your Goal",
+        "text": "Select 4 of the 6 actions and arrange them in the correct dependency order.",
+    },
+    {
+        "icon": "📊",
+        "label": "Scoring",
+        "text": "Selection 70 pts · Order 50 pts · Efficiency 30 pts = 150 max.",
+    },
+    {
+        "icon": "🔗",
+        "label": "Key Insight",
+        "text": "Steps have dependencies: you need a destination before you can check flights or hotels.",
+    },
+    {
+        "icon": "🚫",
+        "label": "Watch Out",
+        "text": "'Convert prices' and 'Generate recommendation' are nice-to-haves, not core steps.",
+    },
+]
+
+_HINT = (
+    "Think in dependency order: where are we going? → is the weather right? "
+    "→ can we get there? → where do we stay? Lock in each answer before moving to the next."
+)
 
 
 def render():
     render_progress(2)
 
-    st.markdown(
-        """
-        <div style="
-            background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(168,85,247,0.04));
-            border: 1px solid #f59e0b33;
-            border-radius: 14px;
-            padding: 24px;
-            margin-bottom: 24px;
-        ">
-            <div style="color:#f59e0b;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">
-                🟡 Level 2 — Route the Workflow
-            </div>
-            <div style="color:#e2e8f0;font-size:20px;font-weight:700;margin-bottom:8px;">
-                Build Reveille's Action Pipeline
-            </div>
-            <div style="color:#94a3b8;font-size:14px;">
-                Select <strong>4 actions</strong> and put them in the <strong>right order</strong>.
-                Reveille needs a logical workflow to plan the trip efficiently.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    render_level_header(
+        level=2,
+        color="#f59e0b",
+        icon="🔀",
+        title="Route the Workflow — Build Reveille's Action Pipeline",
+        description=(
+            "Reveille has the right tools — now it needs a <strong>logical execution order</strong>. "
+            "AI agents make mistakes when they act before gathering enough information. "
+            "Select 4 of the 6 available actions and sequence them so that "
+            "each step has everything it needs from the steps before it."
+        ),
+        details=_DETAILS,
+        hint=_HINT,
+        height=380,
     )
+
+    st.markdown("")
 
     if st.session_state.l2_submitted and st.session_state.l2_result:
         result = st.session_state.l2_result
+
         ordered_names = []
         for oid in st.session_state.l2_order:
             action = next((a for a in LEVEL2_ACTIONS if a["id"] == oid), None)
             if action:
                 ordered_names.append(action["name"])
 
+        correct_names = [
+            next(a["name"] for a in LEVEL2_ACTIONS if a["id"] == oid)
+            for oid in LEVEL2_CORRECT_ORDER
+        ]
+
         logs = [
             {"tag": "system", "text": "Workflow engine started."},
-            {"tag": "plan", "text": f"Pipeline: {' → '.join(ordered_names)}"},
+            {"tag": "plan",   "text": f"Pipeline: {' → '.join(ordered_names)}"},
         ]
         for i, name in enumerate(ordered_names):
-            logs.append({"tag": "act", "text": f"Step {i+1}: {name}"})
-
-        correct_names = [next(a["name"] for a in LEVEL2_ACTIONS if a["id"] == oid) for oid in LEVEL2_CORRECT_ORDER]
+            logs.append({"tag": "act", "text": f"Step {i + 1}: {name}"})
         if ordered_names == correct_names:
-            logs.append({"tag": "success", "text": "Perfect workflow sequence!"})
+            logs.append({"tag": "success", "text": "Perfect workflow sequence — dependencies satisfied!"})
         else:
-            logs.append({"tag": "warning", "text": f"Optimal order was: {' → '.join(correct_names)}"})
+            logs.append({"tag": "warning", "text": f"Optimal order: {' → '.join(correct_names)}"})
         logs.append({"tag": "observe", "text": result["outcome_text"]})
 
         render_terminal(logs, height=300)
-        st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+        st.markdown("")
 
         render_score_screen(
             result["score"]["total"],
@@ -72,7 +100,15 @@ def render():
             level=2,
         )
 
-        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+        if not st.session_state.get("l2_score_saved", False):
+            save_score(
+                st.session_state.team_name,
+                st.session_state.level_best,
+                st.session_state.total_score,
+            )
+            st.session_state.l2_score_saved = True
+
+        st.markdown("")
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🔄 Retry Level", use_container_width=True):
@@ -93,15 +129,15 @@ def render():
         key_prefix="l2",
     )
     st.session_state.l2_selected = selected
-    st.session_state.l2_order = ordered
+    st.session_state.l2_order    = ordered
 
     count = len(selected)
-    color = "#22c55e" if count == 4 else "#f59e0b" if count > 0 else "#64748b"
-    st.markdown(
-        f'<div style="text-align:center;color:{color};font-size:14px;font-weight:600;margin:12px 0;">'
-        f'{count}/4 actions selected</div>',
-        unsafe_allow_html=True,
-    )
+    if count == 4:
+        st.success(f"{count}/4 actions selected ✓")
+    elif count > 0:
+        st.warning(f"{count}/4 actions selected — need exactly 4")
+    else:
+        st.caption("0/4 actions selected")
 
     if count == 4 and len(ordered) == 4:
         if st.button("🚀 Execute Workflow", use_container_width=True, type="primary"):
@@ -109,11 +145,11 @@ def render():
             st.session_state.level_attempts[2] += 1
             attempt = st.session_state.level_attempts[2]
 
-            eval_result = evaluate_level2(selected, ordered)
+            eval_result  = evaluate_level2(selected, ordered)
             score_result = compute_score(LEVEL2_CONFIG, eval_result["decisions"], attempt)
 
             st.session_state.l2_result = {
-                "score": score_result,
+                "score":        score_result,
                 "outcome_text": eval_result["outcome_text"],
             }
             complete_level(2, score_result["total"], score_result["breakdown"])

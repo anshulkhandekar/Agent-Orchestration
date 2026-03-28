@@ -1,8 +1,8 @@
 """Agent Reveille Runs the Loop — Main App."""
 import streamlit as st
-from utils.state import init_state, set_page
+from utils.state import init_state, reset_level_state
 from components.leaderboard import render_leaderboard
-from utils.supabase import save_score
+
 
 # ── Page Config ──
 st.set_page_config(
@@ -15,82 +15,41 @@ st.set_page_config(
 # ── Init State ──
 init_state()
 
-# ── Global Styles ──
+# ── Global CSS (style tags work reliably across Streamlit versions) ──
 st.markdown(
     """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
-
-        /* Hide default Streamlit elements */
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         header {visibility: hidden;}
         .stDeployButton {display: none;}
-
-        /* Global font */
-        html, body, [class*="css"] {
-            font-family: 'Inter', sans-serif;
-        }
-
-        /* Dark theme overrides */
-        .stApp {
-            background-color: #0E1117;
-        }
-
-        /* Headers */
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Syne', sans-serif !important;
-        }
-
-        /* Button styling */
+        html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+        .stApp { background-color: #0E1117; }
+        h1, h2, h3, h4, h5, h6 { font-family: 'Syne', sans-serif !important; }
         .stButton > button {
-            border-radius: 10px;
-            font-weight: 600;
+            border-radius: 10px; font-weight: 600;
             font-family: 'Inter', sans-serif;
-            padding: 8px 20px;
-            transition: all 0.2s ease;
+            padding: 8px 20px; transition: all 0.2s ease;
             border: 1px solid #1e293b;
         }
         .stButton > button:hover {
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(0, 212, 255, 0.15);
         }
-        .stButton > button[kind="primary"] {
-            background: linear-gradient(135deg, #00d4ff, #a855f7) !important;
-            color: white !important;
-            border: none !important;
-        }
-
-        /* Input styling */
         .stTextInput > div > div > input {
             background: rgba(15, 23, 42, 0.6);
-            border: 1px solid #1e293b;
-            border-radius: 10px;
-            color: #e2e8f0;
-            font-family: 'Inter', sans-serif;
+            border: 1px solid #1e293b; border-radius: 10px;
+            color: #e2e8f0; font-family: 'Inter', sans-serif;
             padding: 12px 16px;
         }
         .stTextInput > div > div > input:focus {
             border-color: #00d4ff;
             box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.15);
         }
-
-        /* Divider */
-        hr {
-            border-color: #1e293b;
-        }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #1e293b;
-            border-radius: 3px;
-        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -101,54 +60,22 @@ st.markdown(
 # LANDING PAGE
 # ═══════════════════════════════════════════
 def render_landing():
-    st.markdown("<div style='height: 60px;'></div>", unsafe_allow_html=True)
-
-    st.markdown(
-        """
-        <div style="text-align: center; max-width: 700px; margin: 0 auto;">
-            <div style="font-size: 64px; margin-bottom: 16px;">🤖</div>
-            <h1 style="
-                font-family: 'Syne', sans-serif;
-                font-size: 42px;
-                font-weight: 800;
-                background: linear-gradient(135deg, #00d4ff, #a855f7);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                margin-bottom: 4px;
-                line-height: 1.2;
-            ">Agent Reveille<br>Runs the Loop</h1>
-            <div style="
-                color: #64748b;
-                font-size: 16px;
-                font-weight: 500;
-                letter-spacing: 3px;
-                text-transform: uppercase;
-                margin-bottom: 40px;
-            ">Aggie Data Science Club</div>
-            <div style="
-                color: #94a3b8;
-                font-size: 15px;
-                max-width: 500px;
-                margin: 0 auto 32px;
-                line-height: 1.6;
-            ">
-                Guide an AI agent through 4 levels of decision-making.
-                Select tools, build workflows, catch errors, and supervise the full loop.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
+    st.markdown("")
+    st.markdown("")
+    _, center, _ = st.columns([1, 2, 1])
+    with center:
+        st.markdown("# 🤖 Agent Reveille Runs the Loop")
+        st.caption("AGGIE DATA SCIENCE CLUB")
+        st.markdown(
+            "Guide an AI agent through **4 levels** of decision-making. "
+            "Select tools, build workflows, catch errors, and supervise the full loop."
+        )
+        st.markdown("---")
         team_name = st.text_input(
             "Team Name",
             placeholder="Enter your team name...",
             label_visibility="collapsed",
         )
-        st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-
         if st.button("🚀 Start Mission", use_container_width=True, type="primary"):
             if team_name.strip():
                 st.session_state.team_name = team_name.strip()
@@ -158,104 +85,59 @@ def render_landing():
             else:
                 st.error("Enter a team name to begin!")
 
-    # Level preview cards
-    st.markdown("<div style='height: 48px;'></div>", unsafe_allow_html=True)
+    st.markdown("")
     cols = st.columns(4)
-    levels_preview = [
-        {"num": 1, "name": "Vacation Loadout", "icon": "🟢", "desc": "Select the right tools", "pts": 100},
-        {"num": 2, "name": "Route Workflow", "icon": "🟡", "desc": "Order the action pipeline", "pts": 150},
-        {"num": 3, "name": "Checkpoint Rescue", "icon": "🔵", "desc": "Catch the agent's drift", "pts": 225},
-        {"num": 4, "name": "Mission Control", "icon": "🔴", "desc": "Full loop supervision", "pts": 325},
+    previews = [
+        ("🟢", 1, "Vacation Loadout", "Select the right tools", 100),
+        ("🟡", 2, "Route Workflow", "Order the action pipeline", 150),
+        ("🔵", 3, "Checkpoint Rescue", "Catch the agent's drift", 225),
+        ("🔴", 4, "Mission Control", "Full loop supervision", 325),
     ]
-    for i, lev in enumerate(levels_preview):
+    for i, (icon, num, name, desc, pts) in enumerate(previews):
         with cols[i]:
-            st.markdown(
-                f"""
-                <div style="
-                    background: rgba(15, 23, 42, 0.6);
-                    border: 1px solid #1e293b;
-                    border-radius: 14px;
-                    padding: 20px 16px;
-                    text-align: center;
-                ">
-                    <div style="font-size: 28px; margin-bottom: 8px;">{lev['icon']}</div>
-                    <div style="color: #e2e8f0; font-size: 14px; font-weight: 700; margin-bottom: 4px;">
-                        Level {lev['num']}
-                    </div>
-                    <div style="color: #94a3b8; font-size: 12px; margin-bottom: 8px;">
-                        {lev['desc']}
-                    </div>
-                    <div style="color: #00d4ff; font-size: 12px; font-weight: 600;">
-                        {lev['pts']} pts
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            c = st.container(border=True)
+            with c:
+                st.markdown(f"### {icon} Level {num}")
+                st.markdown(f"**{name}**")
+                st.caption(desc)
+                st.markdown(f":blue[{pts} pts]")
 
 
 # ═══════════════════════════════════════════
 # INSTRUCTIONS
 # ═══════════════════════════════════════════
 def render_instructions():
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
-    st.markdown(
-        f"""
-        <div style="
-            max-width: 640px;
-            margin: 0 auto;
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid #1e293b;
-            border-radius: 18px;
-            padding: 36px;
-        ">
-            <div style="text-align:center;margin-bottom:24px;">
-                <div style="font-size:40px;margin-bottom:8px;">📋</div>
-                <h2 style="font-family:'Syne',sans-serif;color:#e2e8f0;font-size:26px;margin:0;">
-                    Mission Briefing
-                </h2>
-                <div style="color:#64748b;font-size:14px;">Team: {st.session_state.team_name}</div>
-            </div>
+    _, center, _ = st.columns([1, 3, 1])
+    with center:
+        st.markdown("## 📋 Mission Briefing")
+        st.caption(f"Team: {st.session_state.team_name}")
+        st.markdown("---")
 
-            <div style="margin-bottom:20px;">
-                <div style="color:#00d4ff;font-size:13px;font-weight:700;margin-bottom:8px;">🎯 OBJECTIVE</div>
-                <div style="color:#94a3b8;font-size:14px;line-height:1.6;">
-                    Guide agent Reveille through 4 levels. Make smart decisions to earn the highest score.
-                </div>
-            </div>
+        st.markdown("**🎯 OBJECTIVE**")
+        st.markdown(
+            "Guide agent Reveille through 4 levels. "
+            "Make smart decisions to earn the highest score."
+        )
 
-            <div style="margin-bottom:20px;">
-                <div style="color:#a855f7;font-size:13px;font-weight:700;margin-bottom:8px;">📊 SCORING</div>
-                <div style="color:#94a3b8;font-size:14px;line-height:1.6;">
-                    Each level scores on <strong style="color:#e2e8f0;">correctness</strong>,
-                    <strong style="color:#e2e8f0;">efficiency</strong>, and
-                    <strong style="color:#e2e8f0;">outcome quality</strong>.
-                    Total possible: <strong style="color:#00d4ff;">800 points</strong>.
-                </div>
-            </div>
+        st.markdown("**📊 SCORING**")
+        st.markdown(
+            "Each level scores on **correctness**, **efficiency**, and "
+            "**outcome quality**. Total possible: **800 points**."
+        )
 
-            <div style="margin-bottom:20px;">
-                <div style="color:#f59e0b;font-size:13px;font-weight:700;margin-bottom:8px;">🔄 RETRIES</div>
-                <div style="color:#94a3b8;font-size:14px;line-height:1.6;">
-                    You can retry any level, but each attempt reduces max score:
-                    <strong style="color:#e2e8f0;">100% → 92% → 85% → 75%</strong>
-                </div>
-            </div>
+        st.markdown("**🔄 RETRIES**")
+        st.markdown(
+            "You can retry any level, but each attempt reduces max score: "
+            "**100% → 92% → 85% → 75%**"
+        )
 
-            <div>
-                <div style="color:#22c55e;font-size:13px;font-weight:700;margin-bottom:8px;">💡 TIPS</div>
-                <div style="color:#94a3b8;font-size:14px;line-height:1.6;">
-                    Think before you click. Read the terminal output carefully. Discuss with your team!
-                </div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        st.markdown("**💡 TIPS**")
+        st.markdown(
+            "Think before you click. Read the terminal output carefully. "
+            "Discuss with your team!"
+        )
 
-    st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
+        st.markdown("---")
         if st.button("⚡ Begin Level 1", use_container_width=True, type="primary"):
             st.session_state.current_level = 1
             st.session_state.page = "level1"
@@ -266,63 +148,60 @@ def render_instructions():
 # LEADERBOARD PAGE
 # ═══════════════════════════════════════════
 def render_leaderboard_page():
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
-    st.markdown(
-        """
-        <div style="text-align:center;margin-bottom:24px;">
-            <div style="font-size:48px;margin-bottom:8px;">🏆</div>
-            <h2 style="font-family:'Syne',sans-serif;color:#e2e8f0;font-size:28px;margin:0;">
-                Leaderboard
-            </h2>
-            <div style="color:#64748b;font-size:14px;">Best scores across all teams</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.markdown("## 🏆 Leaderboard")
+    st.caption("Best scores across all teams")
 
-    # Show current team summary
     if st.session_state.team_name:
         total = st.session_state.total_score
-        st.markdown(
-            f"""
-            <div style="
-                background: linear-gradient(135deg, rgba(0,212,255,0.06), rgba(168,85,247,0.04));
-                border: 1px solid #00d4ff33;
-                border-radius: 14px;
-                padding: 20px;
-                text-align: center;
-                margin-bottom: 24px;
-            ">
-                <div style="color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:2px;">Your Total Score</div>
-                <div style="color:#00d4ff;font-size:48px;font-weight:800;font-family:'Syne',sans-serif;">{total}</div>
-                <div style="color:#94a3b8;font-size:14px;">out of 800</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Your Total Score", total)
+        with col2:
+            st.metric("Max Possible", 800)
+        with col3:
+            pct = int((total / 800) * 100)
+            st.metric("Percentage", f"{pct}%")
 
+    st.markdown("---")
     render_leaderboard()
 
-    st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🏠 Back to Start", use_container_width=True):
-            st.session_state.page = "landing"
+    # ── Level navigation ──
+    if st.session_state.game_started:
+        st.markdown("")
+        st.markdown("**Jump to a Level:**")
+        level_meta = [
+            ("🟢", 1, 100),
+            ("🟡", 2, 150),
+            ("🔵", 3, 225),
+            ("🔴", 4, 325),
+        ]
+        nav_cols = st.columns(4)
+        for (icon, lev, max_pts), col in zip(level_meta, nav_cols):
+            with col:
+                completed = st.session_state.level_completed.get(lev, False)
+                best = st.session_state.level_best.get(lev, 0)
+                c = st.container(border=True)
+                with c:
+                    st.markdown(f"**{icon} Level {lev}**")
+                    if completed:
+                        st.markdown(f":green[{best} / {max_pts} ✓]")
+                    else:
+                        st.caption(f"Max: {max_pts} pts")
+                if st.button(f"Go to Level {lev}", key=f"lb_nav_{lev}", use_container_width=True):
+                    st.session_state.current_level = lev
+                    st.session_state.page = f"level{lev}"
+                    st.rerun()
+
+
+# ═══════════════════════════════════════════
+# TOP NAV — Leaderboard always accessible
+# ═══════════════════════════════════════════
+if st.session_state.game_started and st.session_state.page != "leaderboard":
+    nav_col1, nav_col2 = st.columns([6, 1])
+    with nav_col2:
+        if st.button("🏆 Leaderboard", use_container_width=True):
+            st.session_state.page = "leaderboard"
             st.rerun()
-    with col2:
-        # Allow replaying from level 1
-        if st.session_state.game_started:
-            if st.button("🔄 Play Again", use_container_width=True, type="primary"):
-                # Reset all level states but keep team name
-                for lev in [1, 2, 3, 4]:
-                    from utils.state import reset_level_state
-                    reset_level_state(lev)
-                    st.session_state.level_completed[lev] = False
-                    st.session_state.level_attempts[lev] = 0
-                    st.session_state.level_scores[lev] = None
-                st.session_state.current_level = 1
-                st.session_state.page = "level1"
-                st.rerun()
 
 
 # ═══════════════════════════════════════════

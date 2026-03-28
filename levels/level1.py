@@ -2,7 +2,7 @@
 import streamlit as st
 from components.terminal import render_terminal
 from components.cards import render_tool_cards
-from components.progress import render_progress, render_score_screen
+from components.progress import render_progress, render_level_header, render_score_screen
 from utils.scoring import (
     LEVEL1_CONFIG,
     LEVEL1_TOOLS,
@@ -11,48 +11,70 @@ from utils.scoring import (
     compute_score,
 )
 from utils.state import complete_level, reset_level_state
+from utils.supabase import save_score
+
+
+_DETAILS = [
+    {
+        "icon": "🎯",
+        "label": "Your Goal",
+        "text": "Pick exactly 3 tools that together cover travel, accommodation, and timing.",
+    },
+    {
+        "icon": "📊",
+        "label": "Scoring",
+        "text": "Correctness 60 pts · Efficiency 25 pts · Outcome Quality 15 pts = 100 max.",
+    },
+    {
+        "icon": "⚠️",
+        "label": "Common Trap",
+        "text": "Maps, Currency, and Restaurants feel relevant but don't book the core trip.",
+    },
+    {
+        "icon": "🔁",
+        "label": "Retries",
+        "text": "You may retry, but each attempt applies a score multiplier (100% → 92% → 85% → 75%).",
+    },
+]
+
+_HINT = (
+    "Every successful trip needs three things: a way to get there, "
+    "a place to sleep, and knowing the weather so you pick the right week."
+)
 
 
 def render():
     render_progress(1)
 
-    # ── Mission Brief ──
-    st.markdown(
-        """
-        <div style="
-            background: linear-gradient(135deg, rgba(34,197,94,0.08), rgba(0,212,255,0.04));
-            border: 1px solid #22c55e33;
-            border-radius: 14px;
-            padding: 24px;
-            margin-bottom: 24px;
-        ">
-            <div style="color:#22c55e;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">
-                🟢 Level 1 — Vacation Loadout
-            </div>
-            <div style="color:#e2e8f0;font-size:20px;font-weight:700;margin-bottom:8px;">
-                Equip Reveille for a European Beach Vacation
-            </div>
-            <div style="color:#94a3b8;font-size:14px;">
-                Your agent needs tools to plan the perfect trip: <strong>warm weather, cheap, near the beach</strong>.
-                Select exactly <strong>3 tools</strong> from the loadout below.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    render_level_header(
+        level=1,
+        color="#22c55e",
+        icon="🏖️",
+        title="Vacation Loadout — European Beach Trip",
+        description=(
+            "Reveille has been asked to plan the perfect European beach vacation: "
+            "warm weather, budget-friendly, and close to the sea. "
+            "As Reveille's supervisor, you must equip it with exactly <strong>3 tools</strong> "
+            "from the loadout below. Every extra tool wastes compute; every missing tool "
+            "leaves a critical gap in the plan."
+        ),
+        details=_DETAILS,
+        hint=_HINT,
+        height=390,
     )
+
+    st.markdown("")
 
     # ── Already submitted → show results ──
     if st.session_state.l1_submitted and st.session_state.l1_result:
         result = st.session_state.l1_result
 
-        # Terminal output
         selected_names = [t["name"] for t in LEVEL1_TOOLS if t["id"] in st.session_state.l1_selected]
-        correct_names = [t["name"] for t in LEVEL1_TOOLS if t["id"] in LEVEL1_CORRECT]
         logs = [
-            {"tag": "system", "text": "Reveille agent initialized."},
-            {"tag": "observe", "text": f"Tools equipped: {', '.join(selected_names)}"},
-            {"tag": "plan", "text": "Planning European beach vacation..."},
-            {"tag": "act", "text": "Searching for destinations with equipped tools..."},
+            {"tag": "system",   "text": "Reveille agent initialized."},
+            {"tag": "observe",  "text": f"Tools equipped: {', '.join(selected_names)}"},
+            {"tag": "plan",     "text": "Planning European beach vacation..."},
+            {"tag": "act",      "text": "Searching for destinations with equipped tools..."},
         ]
         missing = LEVEL1_CORRECT - set(st.session_state.l1_selected)
         if missing:
@@ -65,7 +87,7 @@ def render():
             logs.append({"tag": "checkpoint", "text": "Mission complete with issues. Consider retrying."})
 
         render_terminal(logs, height=280)
-        st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+        st.markdown("")
 
         render_score_screen(
             result["score"]["total"],
@@ -74,7 +96,16 @@ def render():
             level=1,
         )
 
-        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+        # Save score once per submission
+        if not st.session_state.get("l1_score_saved", False):
+            save_score(
+                st.session_state.team_name,
+                st.session_state.level_best,
+                st.session_state.total_score,
+            )
+            st.session_state.l1_score_saved = True
+
+        st.markdown("")
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🔄 Retry Level", use_container_width=True):
@@ -93,12 +124,12 @@ def render():
     st.session_state.l1_selected = selected
 
     count = len(selected)
-    color = "#22c55e" if count == 3 else "#f59e0b" if count > 0 else "#64748b"
-    st.markdown(
-        f'<div style="text-align:center;color:{color};font-size:14px;font-weight:600;margin:12px 0;">'
-        f'{count}/3 tools selected</div>',
-        unsafe_allow_html=True,
-    )
+    if count == 3:
+        st.success(f"{count}/3 tools selected ✓")
+    elif count > 0:
+        st.warning(f"{count}/3 tools selected — need exactly 3")
+    else:
+        st.caption("0/3 tools selected")
 
     if count == 3:
         if st.button("🚀 Deploy Reveille", use_container_width=True, type="primary"):
@@ -106,14 +137,14 @@ def render():
             st.session_state.level_attempts[1] += 1
             attempt = st.session_state.level_attempts[1]
 
-            eval_result = evaluate_level1(st.session_state.l1_selected)
+            eval_result  = evaluate_level1(st.session_state.l1_selected)
             score_result = compute_score(LEVEL1_CONFIG, eval_result["decisions"], attempt)
 
             st.session_state.l1_result = {
-                "score": score_result,
+                "score":        score_result,
                 "outcome_text": eval_result["outcome_text"],
             }
             complete_level(1, score_result["total"], score_result["breakdown"])
             st.rerun()
     elif count > 3:
-        st.warning("Too many tools selected! Remove some to get to exactly 3.")
+        st.error("Too many tools selected! Remove some to reach exactly 3.")

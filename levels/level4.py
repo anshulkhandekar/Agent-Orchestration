@@ -16,29 +16,14 @@ from utils.supabase import save_score
 def render():
     render_progress(4)
 
+    # ── Mission Brief ──
+    st.markdown("### 🔴 Level 4 — Mission Control")
+    st.markdown("#### Aggie Weekend Planner — Full Loop")
     st.markdown(
-        """
-        <div style="
-            background: linear-gradient(135deg, rgba(239,68,68,0.08), rgba(168,85,247,0.04));
-            border: 1px solid #ef444433;
-            border-radius: 14px;
-            padding: 24px;
-            margin-bottom: 24px;
-        ">
-            <div style="color:#ef4444;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">
-                🔴 Level 4 — Mission Control
-            </div>
-            <div style="color:#e2e8f0;font-size:20px;font-weight:700;margin-bottom:8px;">
-                Aggie Weekend Planner — Full Loop
-            </div>
-            <div style="color:#94a3b8;font-size:14px;">
-                Supervise Reveille through <strong>3 decision rounds</strong>.
-                Each round presents a critical decision point in the agent loop.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+        "Supervise Reveille through **3 decision rounds**. "
+        "Each round presents a critical decision point in the agent loop."
     )
+    st.markdown("---")
 
     # ── If fully submitted → show final results ──
     if st.session_state.l4_submitted and st.session_state.l4_result:
@@ -58,12 +43,12 @@ def render():
 
         all_correct = all(LEVEL4_ROUNDS[r]["correct"] == choices.get(r) for r in [1, 2, 3])
         if all_correct:
-            all_logs.append({"tag": "success", "text": "🎉 Perfect supervision across all rounds!"})
+            all_logs.append({"tag": "success", "text": "Perfect supervision across all rounds!"})
         else:
             all_logs.append({"tag": "checkpoint", "text": "Mission complete — room for improvement."})
 
         render_terminal(all_logs, height=380)
-        st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+        st.markdown("")
 
         render_score_screen(
             result["score"]["total"],
@@ -79,7 +64,7 @@ def render():
             st.session_state.total_score,
         )
 
-        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+        st.markdown("")
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🔄 Retry Level", use_container_width=True):
@@ -101,56 +86,24 @@ def render():
         prev_data = LEVEL4_ROUNDS[r]
         outcome = prev_data["outcomes"].get(choice, {"text": ""})
         is_correct = prev_data["correct"] == choice
-        icon = "✅" if is_correct else "⚠️"
         choice_label = next((o["label"] for o in prev_data["options"] if o["id"] == choice), "")
-        st.markdown(
-            f"""
-            <div style="
-                background: rgba(15,23,42,0.4);
-                border: 1px solid {'#22c55e33' if is_correct else '#f59e0b33'};
-                border-radius: 10px;
-                padding: 12px 16px;
-                margin-bottom: 8px;
-                font-size: 13px;
-                color: #94a3b8;
-            ">
-                {icon} <strong style="color:#e2e8f0;">Round {r}:</strong> {choice_label} — {outcome['text']}
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        icon = "✅" if is_correct else "⚠️"
+        st.info(f"{icon} **Round {r}:** {choice_label} — {outcome['text']}")
 
     # Current round
-    st.markdown(
-        f"""
-        <div style="
-            background: rgba(239,68,68,0.06);
-            border: 1px solid #ef444433;
-            border-radius: 12px;
-            padding: 20px;
-            margin: 16px 0;
-        ">
-            <div style="color:#ef4444;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">
-                {rdata['title']}
-            </div>
-            <div style="color:#e2e8f0;font-size:15px;">
-                {rdata['scenario']}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.markdown(f"#### {rdata['title']}")
+    st.markdown(rdata["scenario"])
 
-    # Round progress
-    round_dots = ""
+    # Round progress dots
+    dots = []
     for r in [1, 2, 3]:
         if r < current_round:
-            round_dots += '<span style="width:12px;height:12px;border-radius:50%;background:#22c55e;display:inline-block;margin:0 4px;"></span>'
+            dots.append("🟢")
         elif r == current_round:
-            round_dots += '<span style="width:12px;height:12px;border-radius:50%;background:#ef4444;display:inline-block;margin:0 4px;box-shadow:0 0 8px #ef4444;"></span>'
+            dots.append("🔴")
         else:
-            round_dots += '<span style="width:12px;height:12px;border-radius:50%;background:#1e293b;border:1px solid #334155;display:inline-block;margin:0 4px;"></span>'
-    st.markdown(f'<div style="text-align:center;margin-bottom:16px;">{round_dots}</div>', unsafe_allow_html=True)
+            dots.append("⚪")
+    st.caption(f"Round progress: {' '.join(dots)}")
 
     choice = render_decision_cards(rdata["options"], key_prefix=f"l4_r{current_round}")
 
