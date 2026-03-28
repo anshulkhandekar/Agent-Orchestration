@@ -9,8 +9,7 @@ from utils.scoring import (
     evaluate_level4,
     compute_score,
 )
-from utils.state import complete_level, reset_level_state
-from utils.supabase import save_score
+from utils.state import complete_level, persist_score_once, reset_level_state
 
 
 def render():
@@ -26,9 +25,9 @@ def render():
     st.markdown("---")
 
     # ── If fully submitted → show final results ──
-    if st.session_state.l4_submitted and st.session_state.l4_result:
-        result = st.session_state.l4_result
-        choices = st.session_state.l4_choices
+    if st.session_state.get("l4_submitted") and st.session_state.get("l4_result"):
+        result = st.session_state.get("l4_result")
+        choices = st.session_state.get("l4_choices", {})
 
         all_logs = [{"tag": "system", "text": "Mission Control — Full agent loop review"}]
         for r in [1, 2, 3]:
@@ -55,14 +54,10 @@ def render():
             LEVEL4_CONFIG["max_score"],
             result["score"]["breakdown"],
             level=4,
+            categories=LEVEL4_CONFIG["categories"],
         )
 
-        # Save to leaderboard
-        save_score(
-            st.session_state.team_name,
-            st.session_state.level_best,
-            st.session_state.total_score,
-        )
+        persist_score_once(4)
 
         st.markdown("")
         col1, col2 = st.columns(2)
@@ -72,17 +67,17 @@ def render():
                 st.rerun()
         with col2:
             if st.button("🏆 View Leaderboard", use_container_width=True, type="primary"):
-                st.session_state.page = "leaderboard"
+                st.session_state["page"] = "leaderboard"
                 st.rerun()
         return
 
     # ── Round-by-round play ──
-    current_round = st.session_state.l4_round
+    current_round = st.session_state.get("l4_round", 1)
     rdata = LEVEL4_ROUNDS[current_round]
 
     # Show previous rounds' results
     for r in range(1, current_round):
-        choice = st.session_state.l4_choices.get(r)
+        choice = st.session_state.get("l4_choices", {}).get(r)
         prev_data = LEVEL4_ROUNDS[r]
         outcome = prev_data["outcomes"].get(choice, {"text": ""})
         is_correct = prev_data["correct"] == choice
@@ -108,22 +103,27 @@ def render():
     choice = render_decision_cards(rdata["options"], key_prefix=f"l4_r{current_round}")
 
     if choice:
-        st.session_state.l4_choices[current_round] = choice
+        l4_choices = st.session_state.get("l4_choices", {})
+        l4_choices[current_round] = choice
+        st.session_state["l4_choices"] = l4_choices
         if current_round < 3:
-            st.session_state.l4_round = current_round + 1
+            st.session_state["l4_round"] = current_round + 1
             st.rerun()
         else:
             # All rounds complete
-            st.session_state.l4_submitted = True
-            st.session_state.level_attempts[4] += 1
-            attempt = st.session_state.level_attempts[4]
+            level_attempts = st.session_state.get("level_attempts", {})
+            level_attempts[4] = level_attempts.get(4, 0) + 1
+            st.session_state["level_attempts"] = level_attempts
+            attempt = level_attempts[4]
 
-            eval_result = evaluate_level4(st.session_state.l4_choices)
+            eval_result = evaluate_level4(st.session_state.get("l4_choices", {}))
             score_result = compute_score(LEVEL4_CONFIG, eval_result["decisions"], attempt)
 
-            st.session_state.l4_result = {
+            st.session_state["l4_result"] = {
                 "score": score_result,
                 "outcome_text": eval_result["outcome_text"],
             }
+            st.session_state["l4_submitted"] = True
+            st.session_state["l4_score_saved"] = False
             complete_level(4, score_result["total"], score_result["breakdown"])
             st.rerun()

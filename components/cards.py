@@ -81,7 +81,12 @@ def render_ordering_interface(actions: list, selected: list, ordered: list, key_
     return selected, ordered
 
 
-def render_decision_cards(options: list, key_prefix: str = "decision"):
+def render_decision_cards(
+    options: list,
+    key_prefix: str = "decision",
+    require_confirmation: bool = False,
+    confirm_label: str = "Confirm Decision",
+):
     """Render large decision buttons and return chosen ID.
 
     Uses session state to persist the choice across Streamlit reruns,
@@ -90,23 +95,38 @@ def render_decision_cards(options: list, key_prefix: str = "decision"):
     """
     state_key = f"_dc_{key_prefix}_result"
 
-    # If a choice was stored on a previous run, consume and return it
-    chosen = st.session_state.pop(state_key, None)
-    if chosen is not None:
-        return chosen
+    selected_key = f"{key_prefix}_selected"
+    selected_id = st.session_state.get(selected_key)
+
+    if not require_confirmation:
+        # If a choice was stored on a previous run, consume and return it
+        chosen = st.session_state.pop(state_key, None)
+        if chosen is not None:
+            return chosen
 
     cols = st.columns(2)
     for i, opt in enumerate(options):
         with cols[i % 2]:
             c = st.container(border=True)
             with c:
+                is_selected = selected_id == opt["id"]
                 st.markdown(f"### {opt['icon']}")
-                st.markdown(f"**{opt['label']}**")
+                if is_selected:
+                    st.markdown(f":blue[**{opt['label']}**]")
+                    st.caption("Selected")
+                else:
+                    st.markdown(f"**{opt['label']}**")
             if st.button(
-                f"Choose {opt['id']}",
+                "Selected" if is_selected else f"Choose {opt['id']}",
                 key=f"{key_prefix}_{opt['id']}",
                 use_container_width=True,
             ):
-                st.session_state[state_key] = opt["id"]
+                st.session_state[selected_key] = opt["id"]
+                if not require_confirmation:
+                    st.session_state[state_key] = opt["id"]
                 st.rerun()
+
+    if require_confirmation and selected_id:
+        if st.button(confirm_label, key=f"{key_prefix}_confirm", use_container_width=True, type="primary"):
+            return selected_id
     return None

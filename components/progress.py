@@ -1,6 +1,7 @@
 """Progress bar, level header, and score screen components."""
 import streamlit as st
 import streamlit.components.v1 as components
+from typing import Optional
 
 
 # ─────────────────────────────────────────────
@@ -15,10 +16,15 @@ def render_progress(current_level: int):
         {"num": 4, "name": "Mission Control","color": "#ef4444"},
     ]
 
+    completed_count = sum(
+        1 for lev in levels if st.session_state.get("level_completed", {}).get(lev["num"], False)
+    )
+    overall_pct = int((completed_count / len(levels)) * 100)
+
     items_html = ""
     for i, lev in enumerate(levels):
         is_current = current_level == lev["num"]
-        is_done    = st.session_state.level_completed.get(lev["num"], False)
+        is_done = st.session_state.get("level_completed", {}).get(lev["num"], False)
 
         if is_current:
             bg, border, text_color, icon = f"{lev['color']}22", lev["color"], lev["color"], "▶"
@@ -38,12 +44,24 @@ def render_progress(current_level: int):
             items_html += f'<div style="color:{arrow_c};font-size:18px;display:flex;align-items:center;padding:0 2px;">→</div>'
 
     html = f"""
-    <div style="display:flex;gap:6px;align-items:center;padding:8px;
-        background:rgba(10,14,20,0.6);border-radius:14px;border:1px solid #1e293b;
-        font-family:'Inter',sans-serif;">
-        {items_html}
+    <div style="
+        background:linear-gradient(180deg,rgba(15,23,42,0.82),rgba(10,14,20,0.94));
+        border-radius:14px;border:1px solid #1e293b;padding:10px 12px 12px 12px;
+        font-family:'Inter',sans-serif;box-shadow:0 10px 30px rgba(2,8,23,0.25);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div style="color:#e2e8f0;font-size:12px;font-weight:700;letter-spacing:0.02em;">
+                Mission Progress
+            </div>
+            <div style="color:#64748b;font-size:11px;">{completed_count}/4 levels complete · {overall_pct}%</div>
+        </div>
+        <div style="background:#111827;border-radius:999px;height:6px;overflow:hidden;margin-bottom:10px;">
+            <div style="height:100%;width:{overall_pct}%;background:linear-gradient(90deg,#00d4ff,#22c55e);"></div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+            {items_html}
+        </div>
     </div>"""
-    components.html(html, height=58, scrolling=False)
+    components.html(html, height=92, scrolling=False)
 
 
 # ─────────────────────────────────────────────
@@ -133,25 +151,33 @@ def render_level_header(
 # ─────────────────────────────────────────────
 # SCORE SCREEN
 # ─────────────────────────────────────────────
-def render_score_screen(score: int, max_score: int, breakdown: dict, level: int):
+def render_score_screen(
+    score: int,
+    max_score: int,
+    breakdown: dict,
+    level: int,
+    categories: Optional[list] = None,
+):
     """Render an animated score panel with grade, breakdown bars, and retry info."""
-    pct        = int((score / max(max_score, 1)) * 100)
+    pct = int((score / max(max_score, 1)) * 100)
     multiplier = breakdown.get("retry_multiplier", 1.0)
-    attempts   = st.session_state.level_attempts.get(level, 1)
+    attempts = st.session_state.get("level_attempts", {}).get(level, 1)
 
     grade_color = "#22c55e" if pct >= 80 else "#f59e0b" if pct >= 50 else "#ef4444"
-    grade       = "S" if pct == 100 else "A" if pct >= 80 else "B" if pct >= 60 else "C" if pct >= 40 else "D"
+    grade = "S" if pct == 100 else "A" if pct >= 80 else "B" if pct >= 60 else "C" if pct >= 40 else "D"
+    category_max = {cat["name"]: cat["max"] for cat in (categories or [])}
 
     bars_html = ""
     cats = [(k, v) for k, v in breakdown.items() if k != "retry_multiplier"]
     for i, (cat, pts) in enumerate(cats):
-        bar_pct = min(100, int(pts * 100 / max(max_score, 1)) * 2)
+        cat_max = max(category_max.get(cat, max_score), 1)
+        bar_pct = min(100, int((pts / cat_max) * 100))
         delay_ms = i * 150
         bars_html += f"""
         <div style="margin-bottom:14px;">
             <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
                 <span style="color:#94a3b8;font-size:12.5px;">{cat}</span>
-                <span style="color:#e2e8f0;font-size:12.5px;font-weight:700;">{pts} pts</span>
+                <span style="color:#e2e8f0;font-size:12.5px;font-weight:700;">{pts} / {cat_max}</span>
             </div>
             <div style="background:#1e293b;border-radius:6px;height:9px;overflow:hidden;">
                 <div style="
@@ -191,6 +217,15 @@ def render_score_screen(score: int, max_score: int, breakdown: dict, level: int)
             {score}
         </div>
         <div style="color:#64748b;font-size:13px;margin-bottom:12px;">out of {max_score}</div>
+        <div style="max-width:380px;margin:0 auto 18px auto;">
+            <div style="display:flex;justify-content:space-between;color:#94a3b8;font-size:12px;margin-bottom:6px;">
+                <span>Overall Completion</span>
+                <span>{pct}%</span>
+            </div>
+            <div style="background:#111827;border-radius:999px;height:10px;overflow:hidden;">
+                <div style="height:100%;width:{pct}%;background:linear-gradient(90deg,{grade_color},#00d4ff);"></div>
+            </div>
+        </div>
         <div style="
             display:inline-block;
             background:{grade_color}1a;

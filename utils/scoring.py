@@ -4,6 +4,8 @@ RETRY_MULTIPLIERS = [1.00, 0.92, 0.85, 0.75]
 
 
 def get_retry_multiplier(attempt: int) -> float:
+    if attempt <= 0:
+        return RETRY_MULTIPLIERS[0]
     idx = min(attempt - 1, len(RETRY_MULTIPLIERS) - 1)
     return RETRY_MULTIPLIERS[idx]
 
@@ -196,38 +198,36 @@ LEVEL3_CONFIG = {
 }
 
 LEVEL3_OPTIONS = [
-    {"id": "A", "label": "Continue as planned", "icon": "▶️"},
-    {"id": "B", "label": "Re-check constraints", "icon": "🔍"},
-    {"id": "C", "label": "Search for more options", "icon": "🔎"},
-    {"id": "D", "label": "Finalize booking", "icon": "✅"},
+    {"id": "A", "label": "Let the agent continue comparing premium hotels", "icon": "▶️"},
+    {"id": "B", "label": "Pause it, restore the original constraints, then rerun hotel search", "icon": "🛑"},
+    {"id": "C", "label": "Ask it to justify this hotel before changing anything", "icon": "🧾"},
+    {"id": "D", "label": "Expand the search radius but keep the current shortlist", "icon": "🧭"},
 ]
-
-LEVEL3_CORRECT = "B"
 
 LEVEL3_OUTCOMES = {
     "A": {
         "intervention": 0.0,
-        "outcome": 0.2,
+        "outcome": 0.15,
         "efficiency": 0.3,
-        "text": "Reveille books a hotel that doesn't allow dogs and costs 2x the budget. Disaster!",
+        "text": "Reveille keeps optimizing for rating and location, then books a polished but invalid option that still breaks budget and pet requirements.",
     },
     "B": {
         "intervention": 1.0,
         "outcome": 1.0,
         "efficiency": 1.0,
-        "text": "Reveille re-checks constraints, finds a dog-friendly hotel within budget. Perfect supervision!",
+        "text": "You stop the drift at the checkpoint, restore the real constraints, and rerun the hotel search. Reveille finds a valid dog-friendly option under budget.",
     },
     "C": {
-        "intervention": 0.4,
-        "outcome": 0.5,
-        "efficiency": 0.3,
-        "text": "Reveille searches more but without re-checking constraints, finds similar bad options.",
+        "intervention": 0.55,
+        "outcome": 0.45,
+        "efficiency": 0.55,
+        "text": "The justification exposes the problem, but the agent still hasn't been reset. Useful diagnosis, incomplete recovery.",
     },
     "D": {
-        "intervention": 0.0,
-        "outcome": 0.1,
-        "efficiency": 0.5,
-        "text": "Reveille finalizes a booking that violates both the dog-friendly and budget requirements!",
+        "intervention": 0.35,
+        "outcome": 0.35,
+        "efficiency": 0.45,
+        "text": "A wider search adds inventory, but the shortlist is still anchored to the wrong constraints, so the drift persists longer than it should.",
     },
 }
 

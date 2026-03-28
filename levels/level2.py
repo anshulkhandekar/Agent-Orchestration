@@ -10,8 +10,7 @@ from utils.scoring import (
     evaluate_level2,
     compute_score,
 )
-from utils.state import complete_level, reset_level_state
-from utils.supabase import save_score
+from utils.state import complete_level, persist_score_once, reset_level_state
 
 
 _DETAILS = [
@@ -64,11 +63,11 @@ def render():
 
     st.markdown("")
 
-    if st.session_state.l2_submitted and st.session_state.l2_result:
-        result = st.session_state.l2_result
+    if st.session_state.get("l2_submitted") and st.session_state.get("l2_result"):
+        result = st.session_state.get("l2_result")
 
         ordered_names = []
-        for oid in st.session_state.l2_order:
+        for oid in st.session_state.get("l2_order", []):
             action = next((a for a in LEVEL2_ACTIONS if a["id"] == oid), None)
             if action:
                 ordered_names.append(action["name"])
@@ -98,15 +97,10 @@ def render():
             LEVEL2_CONFIG["max_score"],
             result["score"]["breakdown"],
             level=2,
+            categories=LEVEL2_CONFIG["categories"],
         )
 
-        if not st.session_state.get("l2_score_saved", False):
-            save_score(
-                st.session_state.team_name,
-                st.session_state.level_best,
-                st.session_state.total_score,
-            )
-            st.session_state.l2_score_saved = True
+        persist_score_once(2)
 
         st.markdown("")
         col1, col2 = st.columns(2)
@@ -116,20 +110,20 @@ def render():
                 st.rerun()
         with col2:
             if st.button("Next Level →", use_container_width=True, type="primary"):
-                st.session_state.current_level = 3
-                st.session_state.page = "level3"
+                st.session_state["current_level"] = 3
+                st.session_state["page"] = "level3"
                 st.rerun()
         return
 
     # ── Selection & Ordering UI ──
     selected, ordered = render_ordering_interface(
         LEVEL2_ACTIONS,
-        st.session_state.l2_selected,
-        st.session_state.l2_order,
+        st.session_state.get("l2_selected", []),
+        st.session_state.get("l2_order", []),
         key_prefix="l2",
     )
-    st.session_state.l2_selected = selected
-    st.session_state.l2_order    = ordered
+    st.session_state["l2_selected"] = selected
+    st.session_state["l2_order"] = ordered
 
     count = len(selected)
     if count == 4:
@@ -141,16 +135,19 @@ def render():
 
     if count == 4 and len(ordered) == 4:
         if st.button("🚀 Execute Workflow", use_container_width=True, type="primary"):
-            st.session_state.l2_submitted = True
-            st.session_state.level_attempts[2] += 1
-            attempt = st.session_state.level_attempts[2]
+            level_attempts = st.session_state.get("level_attempts", {})
+            level_attempts[2] = level_attempts.get(2, 0) + 1
+            st.session_state["level_attempts"] = level_attempts
+            attempt = level_attempts[2]
 
-            eval_result  = evaluate_level2(selected, ordered)
+            eval_result = evaluate_level2(selected, ordered)
             score_result = compute_score(LEVEL2_CONFIG, eval_result["decisions"], attempt)
 
-            st.session_state.l2_result = {
-                "score":        score_result,
+            st.session_state["l2_result"] = {
+                "score": score_result,
                 "outcome_text": eval_result["outcome_text"],
             }
+            st.session_state["l2_submitted"] = True
+            st.session_state["l2_score_saved"] = False
             complete_level(2, score_result["total"], score_result["breakdown"])
             st.rerun()

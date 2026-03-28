@@ -10,8 +10,7 @@ from utils.scoring import (
     evaluate_level1,
     compute_score,
 )
-from utils.state import complete_level, reset_level_state
-from utils.supabase import save_score
+from utils.state import complete_level, persist_score_once, reset_level_state
 
 
 _DETAILS = [
@@ -66,17 +65,17 @@ def render():
     st.markdown("")
 
     # ── Already submitted → show results ──
-    if st.session_state.l1_submitted and st.session_state.l1_result:
-        result = st.session_state.l1_result
+    if st.session_state.get("l1_submitted") and st.session_state.get("l1_result"):
+        result = st.session_state.get("l1_result")
 
-        selected_names = [t["name"] for t in LEVEL1_TOOLS if t["id"] in st.session_state.l1_selected]
+        selected_names = [t["name"] for t in LEVEL1_TOOLS if t["id"] in st.session_state.get("l1_selected", [])]
         logs = [
             {"tag": "system",   "text": "Reveille agent initialized."},
             {"tag": "observe",  "text": f"Tools equipped: {', '.join(selected_names)}"},
             {"tag": "plan",     "text": "Planning European beach vacation..."},
             {"tag": "act",      "text": "Searching for destinations with equipped tools..."},
         ]
-        missing = LEVEL1_CORRECT - set(st.session_state.l1_selected)
+        missing = LEVEL1_CORRECT - set(st.session_state.get("l1_selected", []))
         if missing:
             missing_names = [t["name"] for t in LEVEL1_TOOLS if t["id"] in missing]
             logs.append({"tag": "warning", "text": f"Missing critical tools: {', '.join(missing_names)}"})
@@ -94,16 +93,11 @@ def render():
             LEVEL1_CONFIG["max_score"],
             result["score"]["breakdown"],
             level=1,
+            categories=LEVEL1_CONFIG["categories"],
         )
 
         # Save score once per submission
-        if not st.session_state.get("l1_score_saved", False):
-            save_score(
-                st.session_state.team_name,
-                st.session_state.level_best,
-                st.session_state.total_score,
-            )
-            st.session_state.l1_score_saved = True
+        persist_score_once(1)
 
         st.markdown("")
         col1, col2 = st.columns(2)
@@ -113,15 +107,15 @@ def render():
                 st.rerun()
         with col2:
             if st.button("Next Level →", use_container_width=True, type="primary"):
-                st.session_state.current_level = 2
-                st.session_state.page = "level2"
+                st.session_state["current_level"] = 2
+                st.session_state["page"] = "level2"
                 st.rerun()
         return
 
     # ── Tool Selection ──
     st.markdown("##### ⚙️ Select exactly 3 tools")
-    selected = render_tool_cards(LEVEL1_TOOLS, st.session_state.l1_selected, key_prefix="l1_tool")
-    st.session_state.l1_selected = selected
+    selected = render_tool_cards(LEVEL1_TOOLS, st.session_state.get("l1_selected", []), key_prefix="l1_tool")
+    st.session_state["l1_selected"] = selected
 
     count = len(selected)
     if count == 3:
@@ -133,17 +127,20 @@ def render():
 
     if count == 3:
         if st.button("🚀 Deploy Reveille", use_container_width=True, type="primary"):
-            st.session_state.l1_submitted = True
-            st.session_state.level_attempts[1] += 1
-            attempt = st.session_state.level_attempts[1]
+            level_attempts = st.session_state.get("level_attempts", {})
+            level_attempts[1] = level_attempts.get(1, 0) + 1
+            st.session_state["level_attempts"] = level_attempts
+            attempt = level_attempts[1]
 
-            eval_result  = evaluate_level1(st.session_state.l1_selected)
+            eval_result = evaluate_level1(st.session_state.get("l1_selected", []))
             score_result = compute_score(LEVEL1_CONFIG, eval_result["decisions"], attempt)
 
-            st.session_state.l1_result = {
-                "score":        score_result,
+            st.session_state["l1_result"] = {
+                "score": score_result,
                 "outcome_text": eval_result["outcome_text"],
             }
+            st.session_state["l1_submitted"] = True
+            st.session_state["l1_score_saved"] = False
             complete_level(1, score_result["total"], score_result["breakdown"])
             st.rerun()
     elif count > 3:

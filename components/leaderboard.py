@@ -6,6 +6,13 @@ from utils.supabase import get_leaderboard
 def render_leaderboard():
     """Render the full leaderboard table."""
     entries = get_leaderboard()
+    status = st.session_state.get("leaderboard_status", {})
+    status_mode = status.get("mode", "memory")
+    status_message = status.get("message", "")
+
+    if status_message:
+        badge = "Supabase" if status_mode == "supabase" else "Local fallback"
+        st.caption(f"{badge}: {status_message}")
 
     if not entries:
         st.markdown("### 🏆")

@@ -1,6 +1,6 @@
 """Agent Reveille Runs the Loop — Main App."""
 import streamlit as st
-from utils.state import init_state, reset_level_state
+from utils.state import init_state
 from components.leaderboard import render_leaderboard
 
 
@@ -78,9 +78,9 @@ def render_landing():
         )
         if st.button("🚀 Start Mission", use_container_width=True, type="primary"):
             if team_name.strip():
-                st.session_state.team_name = team_name.strip()
-                st.session_state.game_started = True
-                st.session_state.page = "instructions"
+                st.session_state["team_name"] = team_name.strip()
+                st.session_state["game_started"] = True
+                st.session_state["page"] = "instructions"
                 st.rerun()
             else:
                 st.error("Enter a team name to begin!")
@@ -110,7 +110,7 @@ def render_instructions():
     _, center, _ = st.columns([1, 3, 1])
     with center:
         st.markdown("## 📋 Mission Briefing")
-        st.caption(f"Team: {st.session_state.team_name}")
+        st.caption(f"Team: {st.session_state.get('team_name', '')}")
         st.markdown("---")
 
         st.markdown("**🎯 OBJECTIVE**")
@@ -139,8 +139,8 @@ def render_instructions():
 
         st.markdown("---")
         if st.button("⚡ Begin Level 1", use_container_width=True, type="primary"):
-            st.session_state.current_level = 1
-            st.session_state.page = "level1"
+            st.session_state["current_level"] = 1
+            st.session_state["page"] = "level1"
             st.rerun()
 
 
@@ -151,8 +151,8 @@ def render_leaderboard_page():
     st.markdown("## 🏆 Leaderboard")
     st.caption("Best scores across all teams")
 
-    if st.session_state.team_name:
-        total = st.session_state.total_score
+    if st.session_state.get("team_name"):
+        total = st.session_state.get("total_score", 0)
         col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("Your Total Score", total)
@@ -166,7 +166,7 @@ def render_leaderboard_page():
     render_leaderboard()
 
     # ── Level navigation ──
-    if st.session_state.game_started:
+    if st.session_state.get("game_started"):
         st.markdown("")
         st.markdown("**Jump to a Level:**")
         level_meta = [
@@ -178,8 +178,8 @@ def render_leaderboard_page():
         nav_cols = st.columns(4)
         for (icon, lev, max_pts), col in zip(level_meta, nav_cols):
             with col:
-                completed = st.session_state.level_completed.get(lev, False)
-                best = st.session_state.level_best.get(lev, 0)
+                completed = st.session_state.get("level_completed", {}).get(lev, False)
+                best = st.session_state.get("level_best", {}).get(lev, 0)
                 c = st.container(border=True)
                 with c:
                     st.markdown(f"**{icon} Level {lev}**")
@@ -188,26 +188,26 @@ def render_leaderboard_page():
                     else:
                         st.caption(f"Max: {max_pts} pts")
                 if st.button(f"Go to Level {lev}", key=f"lb_nav_{lev}", use_container_width=True):
-                    st.session_state.current_level = lev
-                    st.session_state.page = f"level{lev}"
+                    st.session_state["current_level"] = lev
+                    st.session_state["page"] = f"level{lev}"
                     st.rerun()
 
 
 # ═══════════════════════════════════════════
 # TOP NAV — Leaderboard always accessible
 # ═══════════════════════════════════════════
-if st.session_state.game_started and st.session_state.page != "leaderboard":
+if st.session_state.get("game_started") and st.session_state.get("page") != "leaderboard":
     nav_col1, nav_col2 = st.columns([6, 1])
     with nav_col2:
         if st.button("🏆 Leaderboard", use_container_width=True):
-            st.session_state.page = "leaderboard"
+            st.session_state["page"] = "leaderboard"
             st.rerun()
 
 
 # ═══════════════════════════════════════════
 # ROUTER
 # ═══════════════════════════════════════════
-page = st.session_state.page
+page = st.session_state.get("page", "landing")
 
 if page == "landing":
     render_landing()
