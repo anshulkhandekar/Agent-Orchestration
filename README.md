@@ -5,8 +5,7 @@ Interactive workshop game for the Aggie Data Science Club.
 ## Setup
 
 ```bash
-pip install streamlit
-pip install supabase
+pip install -r requirements.txt
 streamlit run app.py
 ```
 
