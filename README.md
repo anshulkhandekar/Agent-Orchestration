@@ -5,7 +5,8 @@ Interactive workshop game for the Aggie Data Science Club.
 ## Setup
 
 ```bash
-pip install -r requirements.txt
+pip install streamlit
+pip install supabase
 streamlit run app.py
 ```
 
@@ -17,22 +18,13 @@ streamlit run app.py
 
 ## Supabase (optional)
 
-To persist leaderboard scores across sessions, configure Supabase credentials
-in **one** of these locations:
+To persist leaderboard scores across sessions, configure Supabase credentials:
 
-1. `.streamlit/secrets.toml` (recommended for Streamlit Cloud):
+ `.streamlit/secrets.toml` (recommended for Streamlit Cloud):
    ```toml
    SUPABASE_URL = "https://your-project.supabase.co"
    SUPABASE_KEY = "your-anon-or-service-key"
    ```
-
-2. Environment variables:
-   ```bash
-   export SUPABASE_URL="https://your-project.supabase.co"
-   export SUPABASE_KEY="your-anon-or-service-key"
-   ```
-
-If neither is configured, scores are stored in-memory (lost on restart).
 
 See `utils/supabase.py` for the required table schema.
 
