@@ -1,6 +1,7 @@
 # Agent Reveille Runs the Loop
 
 Interactive workshop game for the Aggie Data Science Club.
+Play Here: [Agent Orchestration Activity](https://agent-orchestration-adsc.streamlit.app/)
 
 ## Setup
 
