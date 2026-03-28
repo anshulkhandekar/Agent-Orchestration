@@ -377,7 +377,7 @@ def render_landing():
                 <div class="landing-kicker">Aggie Data Science Club</div>
                 <div class="landing-title">Agent Reveille Runs the Loop</div>
                 <div class="landing-copy">
-                    Guide an AI agent through four levels of decision-making.
+                    Guide Texas A&M's favorite AI agent through four levels of decision-making.
                     Select tools, build workflows, catch failures, and supervise the full loop with clean human-in-the-loop judgment.
                 </div>
             </div>
