@@ -1,13 +1,29 @@
 """Agent Reveille Runs the Loop — Main App."""
 import streamlit as st
+import streamlit.components.v1 as components
 from utils.state import init_state
 from components.leaderboard import render_leaderboard
+
+
+LEVEL_PAGES = {
+    1: "level1",
+    2: "level2",
+    3: "level3",
+    4: "level4",
+}
+
+LEVEL_PREVIEWS = [
+    {"level": 1, "name": "Vacation Loadout", "desc": "Select the right tools", "pts": 100, "color": "#3ccf6e"},
+    {"level": 2, "name": "Route Workflow", "desc": "Order the action pipeline", "pts": 150, "color": "#f2b84b"},
+    {"level": 3, "name": "Checkpoint Rescue", "desc": "Catch the agent's drift", "pts": 225, "color": "#4f8cff"},
+    {"level": 4, "name": "Mission Control", "desc": "Full loop supervision", "pts": 325, "color": "#ff6b5f"},
+]
 
 
 # ── Page Config ──
 st.set_page_config(
     page_title="Agent Reveille Runs the Loop",
-    page_icon="🤖",
+    page_icon="🤖🐶",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -25,21 +41,34 @@ st.markdown(
         header {visibility: hidden;}
         .stDeployButton {display: none;}
         html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-        .stApp { background-color: #0E1117; }
+        .stApp {
+            background:
+                radial-gradient(circle at top, rgba(79, 140, 255, 0.12), transparent 28%),
+                radial-gradient(circle at 80% 0%, rgba(60, 207, 110, 0.08), transparent 20%),
+                #0E1117;
+        }
         h1, h2, h3, h4, h5, h6 { font-family: 'Syne', sans-serif !important; }
         .stButton > button {
-            border-radius: 10px; font-weight: 600;
+            border-radius: 12px; font-weight: 600;
             font-family: 'Inter', sans-serif;
-            padding: 8px 20px; transition: all 0.2s ease;
-            border: 1px solid #1e293b;
+            padding: 10px 20px; transition: all 0.2s ease;
+            border: 1px solid #22324a;
+            background: rgba(15, 23, 42, 0.9);
+            color: #e2e8f0;
         }
         .stButton > button:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 212, 255, 0.15);
+            border-color: rgba(79, 140, 255, 0.5);
+            box-shadow: 0 10px 24px rgba(79, 140, 255, 0.16);
+        }
+        .stButton > button[kind="primary"] {
+            background: linear-gradient(135deg, #4f8cff 0%, #22c1c3 100%);
+            border: 1px solid rgba(128, 210, 255, 0.35);
+            color: #f8fafc;
         }
         .stTextInput > div > div > input {
             background: rgba(15, 23, 42, 0.6);
-            border: 1px solid #1e293b; border-radius: 10px;
+            border: 1px solid #22324a; border-radius: 12px;
             color: #e2e8f0; font-family: 'Inter', sans-serif;
             padding: 12px 16px;
         }
@@ -50,57 +79,347 @@ st.markdown(
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+        .landing-shell {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(8, 12, 19, 0.92));
+            border: 1px solid rgba(34, 50, 74, 0.95);
+            border-radius: 28px;
+            padding: 34px 36px 30px 36px;
+            box-shadow: 0 24px 70px rgba(2, 8, 23, 0.35);
+        }
+        .landing-kicker {
+            color: #7dd3fc;
+            font-size: 0.95rem;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 14px;
+        }
+        .landing-title {
+            color: #f8fafc;
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(3rem, 5vw, 4.4rem);
+            line-height: 0.98;
+            font-weight: 800;
+            margin: 0 0 18px 0;
+        }
+        .landing-copy {
+            color: #cbd5e1;
+            font-size: 1.08rem;
+            line-height: 1.75;
+            max-width: 760px;
+            margin-bottom: 24px;
+        }
+        .landing-preview {
+            background: rgba(10, 14, 20, 0.78);
+            border: 1px solid #22324a;
+            border-radius: 18px;
+            padding: 20px 18px 18px 18px;
+            min-height: 168px;
+        }
+        .landing-preview:hover {
+            border-color: rgba(79, 140, 255, 0.45);
+            box-shadow: 0 16px 34px rgba(8, 15, 30, 0.22);
+        }
+        .landing-preview-top {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            color: #f8fafc;
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 1.7rem;
+        }
+        .landing-preview-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 999px;
+            flex-shrink: 0;
+            box-shadow: 0 0 24px currentColor;
+        }
+        .landing-preview-name {
+            color: #f8fafc;
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .landing-preview-desc {
+            color: #94a3b8;
+            font-size: 0.98rem;
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+        .landing-preview-points {
+            color: #7dd3fc;
+            font-weight: 700;
+            font-size: 1rem;
+        }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 
+def normalize_route():
+    """Keep page state consistent across reruns and manual navigation."""
+    page = st.session_state.get("page", "landing")
+    team_name = (st.session_state.get("team_name") or "").strip()
+    game_started = bool(st.session_state.get("game_started"))
+    protected_pages = {"instructions", "leaderboard", *LEVEL_PAGES.values()}
+
+    if page in protected_pages and not (game_started and team_name):
+        st.session_state["page"] = "landing"
+        st.session_state["current_level"] = 0
+        st.session_state["game_started"] = False
+        return
+
+    if page in LEVEL_PAGES.values():
+        level = int(page[-1])
+        st.session_state["current_level"] = level
+
+
+def render_agentic_workflow_animation():
+    """Render lightweight animated workflow nodes for the landing page hero."""
+    html = """
+    <div style="
+        position:relative;
+        background:linear-gradient(135deg, rgba(8,12,20,0.96), rgba(15,23,42,0.85));
+        border:1px solid rgba(34,50,74,0.95);
+        border-radius:22px;
+        padding:20px 22px 18px 22px;
+        overflow:hidden;
+        min-height:210px;
+        font-family:'Inter',sans-serif;">
+        
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;">
+            <div style="color:#e2e8f0;font-size:14px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">
+                Agentic Workflow
+            </div>
+            <div style="color:#64748b;font-size:12px;">Observe → Plan → Act → Verify</div>
+        </div>
+
+        <div style="position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;z-index:2;">
+            <div class="wf-node wf-node-1" style="--wf-color:#3ccf6e;">
+                <span>Observe</span>
+                <small>Collect constraints</small>
+            </div>
+            <div class="wf-node wf-node-2" style="--wf-color:#f2b84b;">
+                <span>Plan</span>
+                <small>Sequence actions</small>
+            </div>
+            <div class="wf-node wf-node-3" style="--wf-color:#4f8cff;">
+                <span>Act</span>
+                <small>Run the workflow</small>
+            </div>
+            <div class="wf-node wf-node-4" style="--wf-color:#ff6b5f;">
+                <span>Verify</span>
+                <small>Catch drift and score</small>
+            </div>
+        </div>
+
+        <div class="wf-line"></div>
+    </div>
+
+    <style>
+        .wf-node{
+            position:relative;
+            background:rgba(15,23,42,0.74);
+            border:1px solid rgba(34,50,74,0.95);
+            border-radius:16px;
+            min-height:112px;
+            padding:18px 16px;
+            display:flex;
+            flex-direction:column;
+            justify-content:flex-end;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+            transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .wf-node::before{
+            content:"";
+            position:absolute;
+            top:16px;
+            left:16px;
+            width:12px;
+            height:12px;
+            border-radius:999px;
+            background:var(--wf-color);
+            box-shadow:0 0 14px var(--wf-color);
+            opacity:0.8;
+        }
+
+        .wf-node span{
+            color:#f8fafc;
+            font-size:18px;
+            font-weight:700;
+            margin-bottom:7px;
+        }
+
+        .wf-node small{
+            color:#94a3b8;
+            font-size:12px;
+            line-height:1.5;
+        }
+
+        .wf-line{
+            position:absolute;
+            top:78px;
+            left:11%;
+            right:11%;
+            height:2px;
+            background:linear-gradient(
+                90deg,
+                rgba(60,207,110,0.18),
+                rgba(242,184,75,0.18),
+                rgba(79,140,255,0.22),
+                rgba(255,107,95,0.22)
+            );
+            z-index:1;
+        }
+
+        .wf-node-1 { animation:wf-highlight-1 8s infinite; }
+        .wf-node-2 { animation:wf-highlight-2 8s infinite; }
+        .wf-node-3 { animation:wf-highlight-3 8s infinite; }
+        .wf-node-4 { animation:wf-highlight-4 8s infinite; }
+
+        @keyframes wf-highlight-1 {
+            0%, 20% {
+                border-color: color-mix(in srgb, var(--wf-color) 65%, white 10%);
+                box-shadow:
+                    0 0 0 1px color-mix(in srgb, var(--wf-color) 40%, transparent),
+                    0 0 22px color-mix(in srgb, var(--wf-color) 24%, transparent),
+                    inset 0 1px 0 rgba(255,255,255,0.05);
+                transform: translateY(-1px);
+            }
+            25%, 100% {
+                border-color: rgba(34,50,74,0.95);
+                box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes wf-highlight-2 {
+            0%, 24% {
+                border-color: rgba(34,50,74,0.95);
+                box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+                transform: translateY(0);
+            }
+            25%, 45% {
+                border-color: color-mix(in srgb, var(--wf-color) 65%, white 10%);
+                box-shadow:
+                    0 0 0 1px color-mix(in srgb, var(--wf-color) 40%, transparent),
+                    0 0 22px color-mix(in srgb, var(--wf-color) 24%, transparent),
+                    inset 0 1px 0 rgba(255,255,255,0.05);
+                transform: translateY(-1px);
+            }
+            50%, 100% {
+                border-color: rgba(34,50,74,0.95);
+                box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes wf-highlight-3 {
+            0%, 49% {
+                border-color: rgba(34,50,74,0.95);
+                box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+                transform: translateY(0);
+            }
+            50%, 70% {
+                border-color: color-mix(in srgb, var(--wf-color) 65%, white 10%);
+                box-shadow:
+                    0 0 0 1px color-mix(in srgb, var(--wf-color) 40%, transparent),
+                    0 0 22px color-mix(in srgb, var(--wf-color) 24%, transparent),
+                    inset 0 1px 0 rgba(255,255,255,0.05);
+                transform: translateY(-1px);
+            }
+            75%, 100% {
+                border-color: rgba(34,50,74,0.95);
+                box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes wf-highlight-4 {
+            0%, 74% {
+                border-color: rgba(34,50,74,0.95);
+                box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+                transform: translateY(0);
+            }
+            75%, 95% {
+                border-color: color-mix(in srgb, var(--wf-color) 65%, white 10%);
+                box-shadow:
+                    0 0 0 1px color-mix(in srgb, var(--wf-color) 40%, transparent),
+                    0 0 22px color-mix(in srgb, var(--wf-color) 24%, transparent),
+                    inset 0 1px 0 rgba(255,255,255,0.05);
+                transform: translateY(-1px);
+            }
+            100% {
+                border-color: rgba(34,50,74,0.95);
+                box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+                transform: translateY(0);
+            }
+        }
+    </style>
+    """
+    components.html(html, height=230, scrolling=False)
+
+
 # ═══════════════════════════════════════════
 # LANDING PAGE
 # ═══════════════════════════════════════════
 def render_landing():
-    st.markdown("")
-    st.markdown("")
-    _, center, _ = st.columns([1, 2, 1])
+    _, center, _ = st.columns([0.6, 2.8, 0.6])
     with center:
-        st.markdown("# 🤖 Agent Reveille Runs the Loop")
-        st.caption("AGGIE DATA SCIENCE CLUB")
         st.markdown(
-            "Guide an AI agent through **4 levels** of decision-making. "
-            "Select tools, build workflows, catch errors, and supervise the full loop."
+            """
+            <div class="landing-shell">
+                <div class="landing-kicker">Aggie Data Science Club</div>
+                <div class="landing-title">Agent Reveille Runs the Loop</div>
+                <div class="landing-copy">
+                    Guide an AI agent through four levels of decision-making.
+                    Select tools, build workflows, catch failures, and supervise the full loop with clean human-in-the-loop judgment.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
-        st.markdown("---")
+        st.markdown("")
+        render_agentic_workflow_animation()
+        st.markdown("")
         team_name = st.text_input(
             "Team Name",
             placeholder="Enter your team name...",
             label_visibility="collapsed",
         )
-        if st.button("🚀 Start Mission", use_container_width=True, type="primary"):
+        if st.button("Start Mission", use_container_width=True, type="primary"):
             if team_name.strip():
                 st.session_state["team_name"] = team_name.strip()
                 st.session_state["game_started"] = True
                 st.session_state["page"] = "instructions"
+                st.session_state["current_level"] = 0
                 st.rerun()
             else:
                 st.error("Enter a team name to begin!")
 
     st.markdown("")
     cols = st.columns(4)
-    previews = [
-        ("🟢", 1, "Vacation Loadout", "Select the right tools", 100),
-        ("🟡", 2, "Route Workflow", "Order the action pipeline", 150),
-        ("🔵", 3, "Checkpoint Rescue", "Catch the agent's drift", 225),
-        ("🔴", 4, "Mission Control", "Full loop supervision", 325),
-    ]
-    for i, (icon, num, name, desc, pts) in enumerate(previews):
+    for i, preview in enumerate(LEVEL_PREVIEWS):
         with cols[i]:
-            c = st.container(border=True)
-            with c:
-                st.markdown(f"### {icon} Level {num}")
-                st.markdown(f"**{name}**")
-                st.caption(desc)
-                st.markdown(f":blue[{pts} pts]")
+            st.markdown(
+                f"""
+                <div class="landing-preview">
+                    <div class="landing-preview-top">
+                        <span class="landing-preview-dot" style="color:{preview['color']}; background:{preview['color']};"></span>
+                        <span>Level {preview['level']}</span>
+                    </div>
+                    <div class="landing-preview-name">{preview['name']}</div>
+                    <div class="landing-preview-desc">{preview['desc']}</div>
+                    <div class="landing-preview-points">{preview['pts']} pts</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
 
 # ═══════════════════════════════════════════
@@ -148,8 +467,8 @@ def render_instructions():
 # LEADERBOARD PAGE
 # ═══════════════════════════════════════════
 def render_leaderboard_page():
-    st.markdown("## 🏆 Leaderboard")
-    st.caption("Best scores across all teams")
+    st.markdown("## Leaderboard")
+    st.caption("Live team standings across all four levels")
 
     if st.session_state.get("team_name"):
         total = st.session_state.get("total_score", 0)
@@ -169,24 +488,26 @@ def render_leaderboard_page():
     if st.session_state.get("game_started"):
         st.markdown("")
         st.markdown("**Jump to a Level:**")
-        level_meta = [
-            ("🟢", 1, 100),
-            ("🟡", 2, 150),
-            ("🔵", 3, 225),
-            ("🔴", 4, 325),
-        ]
         nav_cols = st.columns(4)
-        for (icon, lev, max_pts), col in zip(level_meta, nav_cols):
+        for preview, col in zip(LEVEL_PREVIEWS, nav_cols):
             with col:
+                lev = preview["level"]
+                max_pts = preview["pts"]
                 completed = st.session_state.get("level_completed", {}).get(lev, False)
                 best = st.session_state.get("level_best", {}).get(lev, 0)
-                c = st.container(border=True)
-                with c:
-                    st.markdown(f"**{icon} Level {lev}**")
-                    if completed:
-                        st.markdown(f":green[{best} / {max_pts} ✓]")
-                    else:
-                        st.caption(f"Max: {max_pts} pts")
+                st.markdown(
+                    f"""
+                    <div class="landing-preview" style="min-height:132px;">
+                        <div class="landing-preview-top" style="font-size:1.2rem; margin-bottom:12px;">
+                            <span class="landing-preview-dot" style="color:{preview['color']}; background:{preview['color']};"></span>
+                            <span>Level {lev}</span>
+                        </div>
+                        <div class="landing-preview-desc" style="margin-bottom:8px;">{preview['name']}</div>
+                        <div class="landing-preview-points">{f'{best} / {max_pts}' if completed else f'Max {max_pts}'}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
                 if st.button(f"Go to Level {lev}", key=f"lb_nav_{lev}", use_container_width=True):
                     st.session_state["current_level"] = lev
                     st.session_state["page"] = f"level{lev}"
@@ -199,7 +520,7 @@ def render_leaderboard_page():
 if st.session_state.get("game_started") and st.session_state.get("page") != "leaderboard":
     nav_col1, nav_col2 = st.columns([6, 1])
     with nav_col2:
-        if st.button("🏆 Leaderboard", use_container_width=True):
+        if st.button("Leaderboard", use_container_width=True):
             st.session_state["page"] = "leaderboard"
             st.rerun()
 
@@ -207,6 +528,7 @@ if st.session_state.get("game_started") and st.session_state.get("page") != "lea
 # ═══════════════════════════════════════════
 # ROUTER
 # ═══════════════════════════════════════════
+normalize_route()
 page = st.session_state.get("page", "landing")
 
 if page == "landing":

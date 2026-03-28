@@ -59,6 +59,38 @@ def _get_client():
     return _client
 
 
+@st.cache_data(ttl=3, show_spinner=False)
+def _cached_remote_entry(supabase_url: str, supabase_key: str, team_name: str):
+    """Fetch one leaderboard row with a short TTL to reduce repeated reads."""
+    from supabase import create_client
+
+    client = create_client(supabase_url, supabase_key)
+    response = (
+        client.table("leaderboard")
+        .select("team, l1, l2, l3, l4, total")
+        .eq("team", team_name)
+        .limit(1)
+        .execute()
+    )
+    return response.data[0] if response.data else None
+
+
+@st.cache_data(ttl=3, show_spinner=False)
+def _cached_remote_leaderboard(supabase_url: str, supabase_key: str):
+    """Fetch leaderboard rows with a short TTL for multi-user traffic."""
+    from supabase import create_client
+
+    client = create_client(supabase_url, supabase_key)
+    response = (
+        client.table("leaderboard")
+        .select("team, l1, l2, l3, l4, total")
+        .order("total", desc=True)
+        .limit(50)
+        .execute()
+    )
+    return response.data
+
+
 LEVEL_NUMBERS = (1, 2, 3, 4)
 
 
@@ -110,15 +142,9 @@ def _fetch_remote_entry(team_name: str) -> Optional[dict]:
         return None
 
     try:
-        response = (
-            client.table("leaderboard")
-            .select("team, l1, l2, l3, l4, total")
-            .eq("team", team_name)
-            .limit(1)
-            .execute()
-        )
-        if response.data:
-            return _normalize_entry(response.data[0])
+        response = _cached_remote_entry(_supabase_url, _supabase_key, team_name)
+        if response:
+            return _normalize_entry(response)
     except Exception:
         _set_status("memory", "Supabase lookup failed. Using in-memory leaderboard cache.")
     return None
@@ -176,6 +202,8 @@ def save_score(team_name: str, level_scores: dict, total: int) -> None:
     }
     try:
         client.table("leaderboard").upsert(row, on_conflict="team").execute()
+        _cached_remote_entry.clear()
+        _cached_remote_leaderboard.clear()
         _set_status("supabase", "Leaderboard synced with Supabase.")
     except Exception as exc:
         _set_status("memory", f"Supabase save failed. Using in-memory cache. ({exc})")
@@ -189,15 +217,9 @@ def get_leaderboard() -> list:
     client = _get_client()
     if client is not None:
         try:
-            resp = (
-                client.table("leaderboard")
-                .select("team, l1, l2, l3, l4, total")
-                .order("total", desc=True)
-                .limit(50)
-                .execute()
-            )
+            resp = _cached_remote_leaderboard(_supabase_url, _supabase_key)
             entries = []
-            for row in resp.data:
+            for row in resp:
                 entry = _normalize_entry(row)
                 if not entry or not entry["team"]:
                     continue
