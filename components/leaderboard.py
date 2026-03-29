@@ -41,7 +41,7 @@ def render_leaderboard():
                     <div style="color:#7dd3fc; font-size:2rem; font-family:'Syne',sans-serif; font-weight:800; margin-bottom:8px;">
                         {entry['total']}
                     </div>
-                    <div style="color:#94a3b8; font-size:0.95rem;">L1 {entry.get('L1', 0)} · L2 {entry.get('L2', 0)} · L3 {entry.get('L3', 0)} · L4 {entry.get('L4', 0)}</div>
+                    <div style="color:#94a3b8; font-size:0.9rem;">L1 {entry.get('L1', 0)} · L2 {entry.get('L2', 0)} · L3 {entry.get('L3', 0)} · L4 {entry.get('L4', 0)} · L5 {entry.get('L5', 0)} · L6 {entry.get('L6', 0)}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -52,7 +52,7 @@ def render_leaderboard():
         """
         <div style="
             display:grid;
-            grid-template-columns: 0.8fr 2.3fr repeat(4, 0.8fr) 1fr;
+            grid-template-columns: 0.8fr 2.2fr repeat(6, 0.75fr) 1fr;
             gap:10px;
             padding:12px 14px;
             margin-bottom:10px;
@@ -70,6 +70,8 @@ def render_leaderboard():
             <div>L2</div>
             <div>L3</div>
             <div>L4</div>
+            <div>L5</div>
+            <div>L6</div>
             <div>Total</div>
         </div>
         """,
@@ -85,7 +87,7 @@ def render_leaderboard():
             f"""
             <div style="
                 display:grid;
-                grid-template-columns: 0.8fr 2.3fr repeat(4, 0.8fr) 1fr;
+                grid-template-columns: 0.8fr 2.2fr repeat(6, 0.75fr) 1fr;
                 gap:10px;
                 align-items:center;
                 padding:16px 14px;
@@ -103,6 +105,8 @@ def render_leaderboard():
                 <div style="color:#cbd5e1;">{entry.get('L2', 0)}</div>
                 <div style="color:#cbd5e1;">{entry.get('L3', 0)}</div>
                 <div style="color:#cbd5e1;">{entry.get('L4', 0)}</div>
+                <div style="color:#cbd5e1;">{entry.get('L5', 0)}</div>
+                <div style="color:#cbd5e1;">{entry.get('L6', 0)}</div>
                 <div style="color:#7dd3fc;font-weight:800;font-size:1.05rem;">{entry['total']}</div>
             </div>
             """,

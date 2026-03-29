@@ -18,9 +18,15 @@ Required Supabase table schema:
         l2          INT DEFAULT 0,
         l3          INT DEFAULT 0,
         l4          INT DEFAULT 0,
+        l5          INT DEFAULT 0,
+        l6          INT DEFAULT 0,
         total       INT DEFAULT 0,
         updated_at  TIMESTAMPTZ DEFAULT NOW()
     );
+
+Schema migration for existing tables:
+    ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS l5 INT DEFAULT 0;
+    ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS l6 INT DEFAULT 0;
 """
 import os
 from datetime import datetime, timezone
@@ -67,7 +73,7 @@ def _cached_remote_entry(supabase_url: str, supabase_key: str, team_name: str):
     client = create_client(supabase_url, supabase_key)
     response = (
         client.table("leaderboard")
-        .select("team, l1, l2, l3, l4, total")
+        .select("team, l1, l2, l3, l4, l5, l6, total")
         .eq("team", team_name)
         .limit(1)
         .execute()
@@ -83,7 +89,7 @@ def _cached_remote_leaderboard(supabase_url: str, supabase_key: str):
     client = create_client(supabase_url, supabase_key)
     response = (
         client.table("leaderboard")
-        .select("team, l1, l2, l3, l4, total")
+        .select("team, l1, l2, l3, l4, l5, l6, total")
         .order("total", desc=True)
         .limit(50)
         .execute()
@@ -91,7 +97,7 @@ def _cached_remote_leaderboard(supabase_url: str, supabase_key: str):
     return response.data
 
 
-LEVEL_NUMBERS = (1, 2, 3, 4)
+LEVEL_NUMBERS = (1, 2, 3, 4, 5, 6)
 
 
 def _local_cache() -> dict:
@@ -124,6 +130,8 @@ def _normalize_entry(entry: Optional[dict]) -> Optional[dict]:
         2: _normalize_score(entry.get("L2", entry.get("l2", 0))),
         3: _normalize_score(entry.get("L3", entry.get("l3", 0))),
         4: _normalize_score(entry.get("L4", entry.get("l4", 0))),
+        5: _normalize_score(entry.get("L5", entry.get("l5", 0))),
+        6: _normalize_score(entry.get("L6", entry.get("l6", 0))),
     }
     total = sum(level_scores.values())
     return {
@@ -132,6 +140,8 @@ def _normalize_entry(entry: Optional[dict]) -> Optional[dict]:
         "L2": level_scores[2],
         "L3": level_scores[3],
         "L4": level_scores[4],
+        "L5": level_scores[5],
+        "L6": level_scores[6],
         "total": total,
     }
 
@@ -181,6 +191,8 @@ def save_score(team_name: str, level_scores: dict, total: int) -> None:
         "L2": merged_scores[2],
         "L3": merged_scores[3],
         "L4": merged_scores[4],
+        "L5": merged_scores[5],
+        "L6": merged_scores[6],
         "total": merged_total,
     }
     _local_cache()[team_name] = merged_entry
@@ -197,6 +209,8 @@ def save_score(team_name: str, level_scores: dict, total: int) -> None:
         "l2": merged_scores[2],
         "l3": merged_scores[3],
         "l4": merged_scores[4],
+        "l5": merged_scores[5],
+        "l6": merged_scores[6],
         "total": merged_total,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }

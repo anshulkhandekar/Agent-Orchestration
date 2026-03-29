@@ -10,6 +10,8 @@ LEVEL_PAGES = {
     2: "level2",
     3: "level3",
     4: "level4",
+    5: "level5",
+    6: "level6",
 }
 
 LEVEL_PREVIEWS = [
@@ -17,6 +19,8 @@ LEVEL_PREVIEWS = [
     {"level": 2, "name": "Route Workflow", "desc": "Order the action pipeline", "pts": 150, "color": "#f2b84b"},
     {"level": 3, "name": "Checkpoint Rescue", "desc": "Catch the agent's drift", "pts": 225, "color": "#4f8cff"},
     {"level": 4, "name": "Mission Control", "desc": "Full loop supervision", "pts": 325, "color": "#ff6b5f"},
+    {"level": 5, "name": "Route the Agent Team", "desc": "Delegate specialists in the right order", "pts": 450, "color": "#8b5cf6"},
+    {"level": 6, "name": "Mission Control Swarm", "desc": "Resolve conflicts and finalize smartly", "pts": 600, "color": "#14b8a6"},
 ]
 
 
@@ -377,8 +381,8 @@ def render_landing():
                 <div class="landing-kicker">Aggie Data Science Club</div>
                 <div class="landing-title">Agent Reveille Runs the Loop</div>
                 <div class="landing-copy">
-                    Guide Texas A&M's favorite AI agent through four levels of decision-making.
-                    Select tools, build workflows, catch failures, and supervise the full loop with clean human-in-the-loop judgment.
+                    Guide Texas A&M's favorite AI agent through six escalating levels of decision-making.
+                    Select tools, supervise execution, orchestrate specialist agents, and coordinate the full loop all the way up to swarm control.
                 </div>
             </div>
             """,
@@ -403,23 +407,25 @@ def render_landing():
                 st.error("Enter a team name to begin!")
 
     st.markdown("")
-    cols = st.columns(4)
-    for i, preview in enumerate(LEVEL_PREVIEWS):
-        with cols[i]:
-            st.markdown(
-                f"""
-                <div class="landing-preview">
-                    <div class="landing-preview-top">
-                        <span class="landing-preview-dot" style="color:{preview['color']}; background:{preview['color']};"></span>
-                        <span>Level {preview['level']}</span>
+    for row_start in range(0, len(LEVEL_PREVIEWS), 3):
+        cols = st.columns(3)
+        row_previews = LEVEL_PREVIEWS[row_start : row_start + 3]
+        for i, preview in enumerate(row_previews):
+            with cols[i]:
+                st.markdown(
+                    f"""
+                    <div class="landing-preview">
+                        <div class="landing-preview-top">
+                            <span class="landing-preview-dot" style="color:{preview['color']}; background:{preview['color']};"></span>
+                            <span>Level {preview['level']}</span>
+                        </div>
+                        <div class="landing-preview-name">{preview['name']}</div>
+                        <div class="landing-preview-desc">{preview['desc']}</div>
+                        <div class="landing-preview-points">{preview['pts']} pts</div>
                     </div>
-                    <div class="landing-preview-name">{preview['name']}</div>
-                    <div class="landing-preview-desc">{preview['desc']}</div>
-                    <div class="landing-preview-points">{preview['pts']} pts</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+                    """,
+                    unsafe_allow_html=True,
+                )
 
 
 # ═══════════════════════════════════════════
@@ -434,14 +440,14 @@ def render_instructions():
 
         st.markdown("**🎯 OBJECTIVE**")
         st.markdown(
-            "Guide agent Reveille through 4 levels. "
+            "Guide agent Reveille through 6 levels. "
             "Make smart decisions to earn the highest score."
         )
 
         st.markdown("**📊 SCORING**")
         st.markdown(
             "Each level scores on **correctness**, **efficiency**, and "
-            "**outcome quality**. Total possible: **800 points**."
+            "**outcome quality**. Total possible: **1850 points**."
         )
 
         st.markdown("**🔄 RETRIES**")
@@ -468,7 +474,7 @@ def render_instructions():
 # ═══════════════════════════════════════════
 def render_leaderboard_page():
     st.markdown("## Leaderboard")
-    st.caption("Live team standings across all four levels")
+    st.caption("Live team standings across all six levels")
 
     if st.session_state.get("team_name"):
         total = st.session_state.get("total_score", 0)
@@ -476,9 +482,9 @@ def render_leaderboard_page():
         with col1:
             st.metric("Your Total Score", total)
         with col2:
-            st.metric("Max Possible", 800)
+            st.metric("Max Possible", 1850)
         with col3:
-            pct = int((total / 800) * 100)
+            pct = int((total / 1850) * 100)
             st.metric("Percentage", f"{pct}%")
 
     st.markdown("---")
@@ -488,30 +494,32 @@ def render_leaderboard_page():
     if st.session_state.get("game_started"):
         st.markdown("")
         st.markdown("**Jump to a Level:**")
-        nav_cols = st.columns(4)
-        for preview, col in zip(LEVEL_PREVIEWS, nav_cols):
-            with col:
-                lev = preview["level"]
-                max_pts = preview["pts"]
-                completed = st.session_state.get("level_completed", {}).get(lev, False)
-                best = st.session_state.get("level_best", {}).get(lev, 0)
-                st.markdown(
-                    f"""
-                    <div class="landing-preview" style="min-height:132px;">
-                        <div class="landing-preview-top" style="font-size:1.2rem; margin-bottom:12px;">
-                            <span class="landing-preview-dot" style="color:{preview['color']}; background:{preview['color']};"></span>
-                            <span>Level {lev}</span>
+        for row_start in range(0, len(LEVEL_PREVIEWS), 3):
+            row_previews = LEVEL_PREVIEWS[row_start : row_start + 3]
+            nav_cols = st.columns(3)
+            for preview, col in zip(row_previews, nav_cols):
+                with col:
+                    lev = preview["level"]
+                    max_pts = preview["pts"]
+                    completed = st.session_state.get("level_completed", {}).get(lev, False)
+                    best = st.session_state.get("level_best", {}).get(lev, 0)
+                    st.markdown(
+                        f"""
+                        <div class="landing-preview" style="min-height:132px;">
+                            <div class="landing-preview-top" style="font-size:1.2rem; margin-bottom:12px;">
+                                <span class="landing-preview-dot" style="color:{preview['color']}; background:{preview['color']};"></span>
+                                <span>Level {lev}</span>
+                            </div>
+                            <div class="landing-preview-desc" style="margin-bottom:8px;">{preview['name']}</div>
+                            <div class="landing-preview-points">{f'{best} / {max_pts}' if completed else f'Max {max_pts}'}</div>
                         </div>
-                        <div class="landing-preview-desc" style="margin-bottom:8px;">{preview['name']}</div>
-                        <div class="landing-preview-points">{f'{best} / {max_pts}' if completed else f'Max {max_pts}'}</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-                if st.button(f"Go to Level {lev}", key=f"lb_nav_{lev}", use_container_width=True):
-                    st.session_state["current_level"] = lev
-                    st.session_state["page"] = f"level{lev}"
-                    st.rerun()
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    if st.button(f"Go to Level {lev}", key=f"lb_nav_{lev}", use_container_width=True):
+                        st.session_state["current_level"] = lev
+                        st.session_state["page"] = f"level{lev}"
+                        st.rerun()
 
 
 # ═══════════════════════════════════════════
@@ -546,6 +554,12 @@ elif page == "level3":
     render()
 elif page == "level4":
     from levels.level4 import render
+    render()
+elif page == "level5":
+    from levels.level5 import render
+    render()
+elif page == "level6":
+    from levels.level6 import render
     render()
 elif page == "leaderboard":
     render_leaderboard_page()

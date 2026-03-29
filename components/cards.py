@@ -30,9 +30,17 @@ def render_tool_cards(tools: list, selected: list, key_prefix: str = "tool") -> 
     return selected
 
 
-def render_ordering_interface(actions: list, selected: list, ordered: list, key_prefix: str = "order"):
+def render_ordering_interface(
+    actions: list,
+    selected: list,
+    ordered: list,
+    key_prefix: str = "order",
+    expected_count: int = 4,
+    selection_title: str = "#### Step 1: Select items",
+    reorder_title: str = "#### Step 2: Reorder (click to move to end)",
+):
     """Render an interface for selecting and ordering actions."""
-    st.markdown("#### 📋 Step 1: Select 4 actions")
+    st.markdown(selection_title)
 
     cols_per_row = 3
     for row_start in range(0, len(actions), cols_per_row):
@@ -58,13 +66,13 @@ def render_ordering_interface(actions: list, selected: list, ordered: list, key_
                         st.rerun()
                 else:
                     if st.button("Select", key=f"{key_prefix}_sel_{action['id']}", use_container_width=True):
-                        if len(selected) < 4:
+                        if len(selected) < expected_count:
                             selected.append(action["id"])
                             ordered.append(action["id"])
                         st.rerun()
 
     if ordered:
-        st.markdown("#### 🔀 Step 2: Reorder (click to move to end)")
+        st.markdown(reorder_title)
         reorder_cols = st.columns(len(ordered))
         for i, oid in enumerate(ordered):
             action = next(a for a in actions if a["id"] == oid)

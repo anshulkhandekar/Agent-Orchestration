@@ -66,8 +66,9 @@ def render():
                 reset_level_state(4)
                 st.rerun()
         with col2:
-            if st.button("🏆 View Leaderboard", use_container_width=True, type="primary"):
-                st.session_state["page"] = "leaderboard"
+            if st.button("Next Level →", use_container_width=True, type="primary"):
+                st.session_state["current_level"] = 5
+                st.session_state["page"] = "level5"
                 st.rerun()
         return
 

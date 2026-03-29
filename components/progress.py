@@ -8,12 +8,14 @@ from typing import Optional
 # LEVEL PROGRESS BAR
 # ─────────────────────────────────────────────
 def render_progress(current_level: int):
-    """Render the Level 1 → 2 → 3 → 4 progress strip."""
+    """Render the full six-level progress strip."""
     levels = [
-        {"num": 1, "name": "Loadout",       "color": "#22c55e"},
-        {"num": 2, "name": "Workflow",      "color": "#f59e0b"},
-        {"num": 3, "name": "Checkpoint",    "color": "#3b82f6"},
-        {"num": 4, "name": "Mission Control","color": "#ef4444"},
+        {"num": 1, "name": "Loadout", "color": "#22c55e", "group": "Foundations"},
+        {"num": 2, "name": "Workflow", "color": "#f59e0b", "group": "Foundations"},
+        {"num": 3, "name": "Checkpoint", "color": "#3b82f6", "group": "Supervision"},
+        {"num": 4, "name": "Mission Control", "color": "#ef4444", "group": "Supervision"},
+        {"num": 5, "name": "Agent Team", "color": "#8b5cf6", "group": "Orchestration"},
+        {"num": 6, "name": "Swarm", "color": "#14b8a6", "group": "Orchestration"},
     ]
 
     completed_count = sum(
@@ -39,9 +41,25 @@ def render_progress(current_level: int):
             color:{text_color};font-size:12px;font-weight:600;">
             <span style="font-size:14px;">{icon}</span> L{lev['num']}: {lev['name']}
         </div>"""
-        if i < 3:
+        if i < len(levels) - 1:
             arrow_c = "#22c55e" if is_done else "#334155"
             items_html += f'<div style="color:{arrow_c};font-size:18px;display:flex;align-items:center;padding:0 2px;">→</div>'
+
+    group_html = ""
+    groups = [("Foundations", 2), ("Supervision", 2), ("Orchestration", 2)]
+    for label, span in groups:
+        group_html += f"""
+        <div style="
+            flex:{span};
+            color:#64748b;
+            font-size:10.5px;
+            font-weight:700;
+            letter-spacing:0.14em;
+            text-transform:uppercase;
+            padding:0 6px;">
+            {label}
+        </div>
+        """
 
     html = f"""
     <div style="
@@ -52,16 +70,19 @@ def render_progress(current_level: int):
             <div style="color:#e2e8f0;font-size:12px;font-weight:700;letter-spacing:0.02em;">
                 Mission Progress
             </div>
-            <div style="color:#64748b;font-size:11px;">{completed_count}/4 levels complete · {overall_pct}%</div>
+            <div style="color:#64748b;font-size:11px;">{completed_count}/6 levels complete · {overall_pct}%</div>
         </div>
         <div style="background:#111827;border-radius:999px;height:6px;overflow:hidden;margin-bottom:10px;">
             <div style="height:100%;width:{overall_pct}%;background:linear-gradient(90deg,#00d4ff,#22c55e);"></div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+            {group_html}
         </div>
         <div style="display:flex;gap:6px;align-items:center;">
             {items_html}
         </div>
     </div>"""
-    components.html(html, height=92, scrolling=False)
+    components.html(html, height=110, scrolling=False)
 
 
 # ─────────────────────────────────────────────

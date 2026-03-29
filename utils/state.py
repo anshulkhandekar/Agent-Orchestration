@@ -4,7 +4,7 @@ from copy import deepcopy
 import streamlit as st
 
 
-LEVEL_NUMBERS = (1, 2, 3, 4)
+LEVEL_NUMBERS = (1, 2, 3, 4, 5, 6)
 
 STATE_DEFAULTS = {
     "page": "landing",
@@ -38,6 +38,16 @@ STATE_DEFAULTS = {
     "l4_submitted": False,
     "l4_result": None,
     "l4_score_saved": False,
+    "l5_selected": [],
+    "l5_order": [],
+    "l5_submitted": False,
+    "l5_result": None,
+    "l5_score_saved": False,
+    "l6_round": 1,
+    "l6_choices": {},
+    "l6_submitted": False,
+    "l6_result": None,
+    "l6_score_saved": False,
     # Animation helpers
     "show_terminal": False,
     "terminal_done": False,
@@ -101,6 +111,20 @@ def reset_level_state(level: int):
         st.session_state["l4_submitted"] = False
         st.session_state["l4_result"] = None
         st.session_state["l4_score_saved"] = False
+    elif level == 5:
+        st.session_state["l5_selected"] = []
+        st.session_state["l5_order"] = []
+        st.session_state["l5_submitted"] = False
+        st.session_state["l5_result"] = None
+        st.session_state["l5_score_saved"] = False
+    elif level == 6:
+        st.session_state["l6_round"] = 1
+        st.session_state["l6_choices"] = {}
+        for round_num in (1, 2, 3):
+            st.session_state.pop(f"l6_r{round_num}_selected", None)
+        st.session_state["l6_submitted"] = False
+        st.session_state["l6_result"] = None
+        st.session_state["l6_score_saved"] = False
     st.session_state["show_terminal"] = False
     st.session_state["terminal_done"] = False
 
