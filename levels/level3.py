@@ -9,7 +9,7 @@ from utils.scoring import (
     evaluate_level3,
     compute_score,
 )
-from utils.state import complete_level, persist_score_once, reset_level_state
+from utils.state import complete_level, get_level_hint, persist_score_once, reset_level_state, unlock_level_hint
 
 
 _DETAILS = [
@@ -54,7 +54,7 @@ def render():
             "Read the log carefully, find the drift signal, and choose the intervention that restores alignment with the fewest wasted steps."
         ),
         details=_DETAILS,
-        hint=_HINT,
+        hint=get_level_hint(3, _HINT),
         height=400,
     )
 
@@ -110,6 +110,7 @@ def render():
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🔄 Retry Level", use_container_width=True):
+                unlock_level_hint(3)
                 reset_level_state(3)
                 st.rerun()
         with col2:

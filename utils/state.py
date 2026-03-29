@@ -24,30 +24,36 @@ STATE_DEFAULTS = {
     "l1_submitted": False,
     "l1_result": None,
     "l1_score_saved": False,
+    "l1_hint_unlocked": False,
     "l2_selected": [],
     "l2_order": [],
     "l2_submitted": False,
     "l2_result": None,
     "l2_score_saved": False,
+    "l2_hint_unlocked": False,
     "l3_choice": None,
     "l3_submitted": False,
     "l3_result": None,
     "l3_score_saved": False,
+    "l3_hint_unlocked": False,
     "l4_round": 1,
     "l4_choices": {},
     "l4_submitted": False,
     "l4_result": None,
     "l4_score_saved": False,
+    "l4_hint_unlocked": False,
     "l5_selected": [],
     "l5_order": [],
     "l5_submitted": False,
     "l5_result": None,
     "l5_score_saved": False,
+    "l5_hint_unlocked": False,
     "l6_round": 1,
     "l6_choices": {},
     "l6_submitted": False,
     "l6_result": None,
     "l6_score_saved": False,
+    "l6_hint_unlocked": False,
     # Animation helpers
     "show_terminal": False,
     "terminal_done": False,
@@ -177,3 +183,15 @@ def persist_score_once(level: int) -> bool:
     )
     st.session_state[save_flag_key] = True
     return True
+
+
+def unlock_level_hint(level: int) -> None:
+    """Reveal a level hint after the user explicitly retries."""
+    st.session_state[f"l{level}_hint_unlocked"] = True
+
+
+def get_level_hint(level: int, actual_hint: str) -> str:
+    """Return either the real hint or the locked placeholder copy."""
+    if st.session_state.get(f"l{level}_hint_unlocked", False):
+        return actual_hint
+    return "Hint unlocks after your first attempt. Complete the level once, then click Retry Level to reveal it."

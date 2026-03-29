@@ -10,7 +10,7 @@ from utils.scoring import (
     evaluate_level2,
     compute_score,
 )
-from utils.state import complete_level, persist_score_once, reset_level_state
+from utils.state import complete_level, get_level_hint, persist_score_once, reset_level_state, unlock_level_hint
 
 
 _DETAILS = [
@@ -57,7 +57,7 @@ def render():
             "each step has everything it needs from the steps before it."
         ),
         details=_DETAILS,
-        hint=_HINT,
+        hint=get_level_hint(2, _HINT),
         height=380,
     )
 
@@ -106,6 +106,7 @@ def render():
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🔄 Retry Level", use_container_width=True):
+                unlock_level_hint(2)
                 reset_level_state(2)
                 st.rerun()
         with col2:

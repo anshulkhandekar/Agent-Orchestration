@@ -248,3 +248,13 @@ def get_leaderboard() -> list:
     entries = list(_local_cache().values())
     entries.sort(key=lambda item: (-item["total"], item["team"].lower()))
     return entries
+
+
+def get_existing_team_names() -> set:
+    """Return normalized existing team names from the leaderboard source."""
+    entries = get_leaderboard()
+    return {
+        (entry.get("team") or "").strip().lower()
+        for entry in entries
+        if (entry.get("team") or "").strip()
+    }

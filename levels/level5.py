@@ -11,7 +11,7 @@ from utils.scoring import (
     compute_score,
     evaluate_level5,
 )
-from utils.state import complete_level, persist_score_once, reset_level_state
+from utils.state import complete_level, get_level_hint, persist_score_once, reset_level_state, unlock_level_hint
 
 
 _DETAILS = [
@@ -56,7 +56,7 @@ def render():
             "what order they work in, and when synthesis happens. Strong orchestration creates a better Aggie Weekend package with less coordination waste."
         ),
         details=_DETAILS,
-        hint=_HINT,
+        hint=get_level_hint(5, _HINT),
         height=405,
     )
 
@@ -102,6 +102,7 @@ def render():
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🔄 Retry Level", use_container_width=True):
+                unlock_level_hint(5)
                 reset_level_state(5)
                 st.rerun()
         with col2:

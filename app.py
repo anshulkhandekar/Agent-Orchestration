@@ -3,6 +3,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 from utils.state import init_state
 from components.leaderboard import render_leaderboard
+from utils.supabase import get_existing_team_names
 
 
 LEVEL_PAGES = {
@@ -396,15 +397,22 @@ def render_landing():
             placeholder="Enter your team name...",
             label_visibility="collapsed",
         )
+        normalized_team_name = team_name.strip()
+        existing_team_names = get_existing_team_names() if normalized_team_name else set()
+        duplicate_name = normalized_team_name.lower() in existing_team_names
+        if duplicate_name:
+            st.error("That team name has already been claimed. Choose a different team name.")
         if st.button("Start Mission", use_container_width=True, type="primary"):
-            if team_name.strip():
-                st.session_state["team_name"] = team_name.strip()
+            if not normalized_team_name:
+                st.error("Enter a team name to begin!")
+            elif duplicate_name:
+                st.error("That team name has already been claimed. Choose a different team name.")
+            else:
+                st.session_state["team_name"] = normalized_team_name
                 st.session_state["game_started"] = True
                 st.session_state["page"] = "instructions"
                 st.session_state["current_level"] = 0
                 st.rerun()
-            else:
-                st.error("Enter a team name to begin!")
 
     st.markdown("")
     for row_start in range(0, len(LEVEL_PREVIEWS), 3):

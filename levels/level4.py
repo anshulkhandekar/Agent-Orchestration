@@ -2,27 +2,63 @@
 import streamlit as st
 from components.terminal import render_terminal
 from components.cards import render_decision_cards
-from components.progress import render_progress, render_score_screen
+from components.progress import render_level_header, render_progress, render_score_screen
 from utils.scoring import (
     LEVEL4_CONFIG,
     LEVEL4_ROUNDS,
     evaluate_level4,
     compute_score,
 )
-from utils.state import complete_level, persist_score_once, reset_level_state
+from utils.state import complete_level, get_level_hint, persist_score_once, reset_level_state, unlock_level_hint
+
+
+_LEVEL4_HINT = (
+    "Use each round to tighten the loop: compare first, resolve tradeoffs second, and re-check the original goal before finalizing."
+)
+
+_DETAILS = [
+    {
+        "icon": "🎯",
+        "label": "Your Goal",
+        "text": "Guide Reveille through a full three-step planning loop, choosing the best supervisory action at each checkpoint.",
+    },
+    {
+        "icon": "🧠",
+        "label": "What You Control",
+        "text": "You are not building the itinerary directly. You are deciding how the agent should compare, adjust, and validate its work.",
+    },
+    {
+        "icon": "🔄",
+        "label": "Round Flow",
+        "text": "Round 1 compares plans, Round 2 resolves tradeoffs, and Round 3 checks whether the final plan still matches the original goals.",
+    },
+    {
+        "icon": "📊",
+        "label": "Scoring",
+        "text": "Plan Comparison 110 pts · Constraint Balance 110 pts · Goal Alignment 105 pts = 325 max.",
+    },
+]
 
 
 def render():
     render_progress(4)
 
-    # ── Mission Brief ──
-    st.markdown("### 🔴 Level 4 — Mission Control")
-    st.markdown("#### Aggie Weekend Planner — Full Loop")
-    st.markdown(
-        "Supervise Reveille through **3 decision rounds**. "
-        "Each round presents a critical decision point in the agent loop."
+    render_level_header(
+        level=4,
+        color="#ef4444",
+        icon="🎛️",
+        title="Mission Control — Aggie Weekend Planner",
+        description=(
+            "This level simulates a <strong>full agent loop from start to finish</strong>. "
+            "Reveille is already planning the weekend, and your job is to intervene at the right moments: "
+            "first when plans need comparison, then when constraints conflict, and finally when the agent is ready to ship a result. "
+            "Treat each round like a mission-control checkpoint where the quality of your supervision determines the final outcome."
+        ),
+        details=_DETAILS,
+        hint=get_level_hint(4, _LEVEL4_HINT),
+        height=398,
     )
-    st.markdown("---")
+    st.markdown("")
 
     # ── If fully submitted → show final results ──
     if st.session_state.get("l4_submitted") and st.session_state.get("l4_result"):
@@ -63,6 +99,7 @@ def render():
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🔄 Retry Level", use_container_width=True):
+                unlock_level_hint(4)
                 reset_level_state(4)
                 st.rerun()
         with col2:
